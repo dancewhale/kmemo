@@ -1,3 +1,5 @@
+# 建议使用 Python 3.10–3.12（含 Apple Silicon 官方 wheel）。
+# Python 3.14 等过新版本常无 grpcio 预编译包，pip 会走源码编译并容易在 clang 下失败。
 grpcio==1.67.1
 grpcio-tools==1.67.1
 protobuf==5.28.3

@@ -146,6 +146,12 @@ tasks:
       - rm -f {{.GEN_PY_DIR}}/kmemo/v1/kmemo_pb2.py {{.GEN_PY_DIR}}/kmemo/v1/kmemo_pb2_grpc.py
       - rm -rf build desktop/build desktop/bin desktop/frontend/node_modules .task
 
+  clean:venv:
+    desc: Remove .venv（切换 Python 大版本或 grpcio 装失败时，删后重跑 task bootstrap）
+    dir: "{{.TASKFILE_DIR}}"
+    cmds:
+      - rm -rf .venv
+
   lint:
     desc: Lightweight static checks (requires golangci-lint and ruff optional)
     dir: "{{.TASKFILE_DIR}}"

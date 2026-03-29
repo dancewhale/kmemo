@@ -18,6 +18,7 @@
 ## 前置依赖
 
 - Go 1.22+（若 `go` 报 GOROOT 错误，请用 Homebrew 修复或设置正确的 `GOROOT`）
+- **Python 3.10–3.12（推荐 3.12）**。在 Apple Silicon 上，`grpcio` 对 **Python 3.14** 等过新版本往往**没有**预编译 wheel，`pip` 会改为**源码编译** C 扩展，容易触发 `clang` / `CompileError`。若你默认的 `python3` 是 3.14，请安装 3.12 并用它建虚拟环境（见下文「grpcio 安装失败」）。
 - [Task](https://taskfile.dev/)（`go install github.com/go-task/task/v3/cmd/task@latest`）
 - Node.js + npm（Wails 前端）
 - [Wails CLI](https://wails.io/) v2（`go install github.com/wailsapp/wails/v2/cmd/wails@latest`）
