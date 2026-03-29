@@ -1,0 +1,172 @@
+version: "3"
+
+vars:
+  PROTO_ROOT: proto
+  PROTO_FILE: kmemo/v1/kmemo.proto
+  GEN_GO_DIR: gen
+  GEN_PY_DIR: python/generated
+
+tasks:
+  default:
+    desc: List common tasks
+    cmds:
+      - task --list
+
+  proto:
+    desc: Generate Go and Python gRPC code from proto (uses grpcio-tools embedded protoc; requires Go protoc plugins on PATH)
+    dir: "{{.TASKFILE_DIR}}"
+    cmds:
+      - mkdir -p {{.GEN_GO_DIR}} {{.GEN_PY_DIR}}/kmemo/v1
+      - |
+        set -e
+        if [ -x "{{.TASKFILE_DIR}}/.venv/bin/python" ]; then
+          PY="{{.TASKFILE_DIR}}/.venv/bin/python"
+        else
+          PY="python3"
+        fi
+        export PATH="$(go env GOPATH)/bin:$PATH"
+        $PY -m grpc_tools.protoc -I {{.PROTO_ROOT}} \
+          --go_out={{.GEN_GO_DIR}} --go_opt=paths=source_relative \
+          --go-grpc_out={{.GEN_GO_DIR}} --go-grpc_opt=paths=source_relative \
+          {{.PROTO_FILE}}
+        $PY -m grpc_tools.protoc -I {{.PROTO_ROOT}} \
+          --python_out={{.GEN_PY_DIR}} \
+          --grpc_python_out={{.GEN_PY_DIR}} \
+          {{.PROTO_FILE}}
+      - test -f {{.GEN_PY_DIR}}/kmemo/__init__.py || printf '' > {{.GEN_PY_DIR}}/kmemo/__init__.py
+      - test -f {{.GEN_PY_DIR}}/kmemo/v1/__init__.py || printf '' > {{.GEN_PY_DIR}}/kmemo/v1/__init__.py
+
+  run:python:
+    desc: Start Python gRPC server (run proto first)
+    deps: [proto]
+    dir: "{{.TASKFILE_DIR}}/python"
+    cmds:
+      - |
+        if [ -x "{{.TASKFILE_DIR}}/.venv/bin/python" ]; then
+          exec "{{.TASKFILE_DIR}}/.venv/bin/python" -m app.server
+        else
+          exec python3 -m app.server
+        fi
+
+  run:go:
+    desc: Run headless Go host without dialing Python (set KMEMO_SKIP_PYTHON=0 to require worker)
+    deps: [proto]
+    dir: "{{.TASKFILE_DIR}}"
+    env:
+      KMEMO_SKIP_PYTHON: "1"
+    cmds:
+      - go run ./cmd/kmemo
+
+  run:go:connected:
+    desc: Run headless Go host and dial Python gRPC (worker must be running)
+    deps: [proto]
+    dir: "{{.TASKFILE_DIR}}"
+    env:
+      KMEMO_SKIP_PYTHON: "0"
+    cmds:
+      - go run ./cmd/kmemo
+
+  run:wails:
+    desc: Wails dev mode (from desktop/; run proto first; Python optional via KMEMO_SKIP_PYTHON)
+    deps: [proto]
+    dir: "{{.TASKFILE_DIR}}/desktop"
+    env:
+      KMEMO_SKIP_PYTHON: "1"
+    cmds:
+      - wails dev
+
+  test:go:
+    desc: Run Go tests
+    deps: [proto]
+    dir: "{{.TASKFILE_DIR}}"
+    cmds:
+      - go test ./...
+
+  test:python:
+    desc: Run Python pytest
+    deps: [proto]
+    dir: "{{.TASKFILE_DIR}}/python"
+    cmds:
+      - |
+        if [ -x "{{.TASKFILE_DIR}}/.venv/bin/python" ]; then
+          exec "{{.TASKFILE_DIR}}/.venv/bin/python" -m pytest tests/ -q
+        else
+          exec python3 -m pytest tests/ -q
+        fi
+
+  test:
+    desc: Run all tests
+    deps: [proto]
+    dir: "{{.TASKFILE_DIR}}"
+    cmds:
+      - go test ./...
+      - |
+        cd python
+        if [ -x "../.venv/bin/python" ]; then
+          ../.venv/bin/python -m pytest tests/ -q
+        else
+          python3 -m pytest tests/ -q
+        fi
+
+  build:go:
+    desc: Build headless Go binary
+    deps: [proto]
+    dir: "{{.TASKFILE_DIR}}"
+    cmds:
+      - mkdir -p build
+      - go build -o build/kmemo ./cmd/kmemo
+
+  build:wails:
+    desc: Build Wails desktop app
+    deps: [proto]
+    dir: "{{.TASKFILE_DIR}}/desktop"
+    cmds:
+      - wails build
+
+  build:
+    desc: Build Go host and Wails app
+    deps: [build:go, build:wails]
+
+  dev:
+    desc: Regenerate protos; use two terminals for Python + Wails (or run headless Go)
+    deps: [proto]
+    dir: "{{.TASKFILE_DIR}}"
+    cmds:
+      - |
+        echo "Protos ready."
+        echo "  Terminal A: task run:python"
+        echo "  Terminal B: task run:wails"
+        echo "  Headless Go: task run:go"
+
+  clean:
+    desc: Remove generated code and common build artifacts
+    dir: "{{.TASKFILE_DIR}}"
+    cmds:
+      - rm -rf {{.GEN_GO_DIR}}/kmemo
+      - rm -f {{.GEN_PY_DIR}}/kmemo/v1/kmemo_pb2.py {{.GEN_PY_DIR}}/kmemo/v1/kmemo_pb2_grpc.py
+      - rm -rf build desktop/build desktop/bin desktop/frontend/node_modules .task
+
+  lint:
+    desc: Lightweight static checks (requires golangci-lint and ruff optional)
+    dir: "{{.TASKFILE_DIR}}"
+    cmds:
+      - cmd: golangci-lint run ./... || true
+      - cmd: cd python && ( [ -x ../.venv/bin/python ] && ../.venv/bin/python -m ruff check app tests || python3 -m ruff check app tests ) || true
+
+  format:
+    desc: Format Go; optional Python with ruff
+    dir: "{{.TASKFILE_DIR}}"
+    cmds:
+      - go fmt ./...
+      - cmd: cd python && ( [ -x ../.venv/bin/python ] && ../.venv/bin/python -m ruff format app tests || python3 -m ruff format app tests ) || true
+
+  bootstrap:
+    desc: Install Go deps, Python venv deps, frontend deps, and Go protoc plugins
+    dir: "{{.TASKFILE_DIR}}"
+    cmds:
+      - go mod download
+      - test -d .venv || python3 -m venv .venv
+      - ./.venv/bin/pip install -r python/requirements.txt
+      - cd desktop/frontend && npm install
+      - go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.35.1
+      - go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.5.1

@@ -1,0 +1,20 @@
+# Build / cache
+build/
+desktop/build/
+desktop/bin/
+.task/
+*.exe
+.DS_Store
+
+# Go
+*.test
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Node (Wails frontend)
+desktop/frontend/node_modules/

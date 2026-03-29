@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package kmemo.v1;
+
+option go_package = "kmemo/gen/kmemo/v1;kmemov1";
+
+// KmemoProcessor is invoked by the Go host; Python holds algorithms and heavy text work.
+// All RPCs are unary; streaming is intentionally omitted for now.
+service KmemoProcessor {
+  rpc CalculateFsrs(CalculateFsrsRequest) returns (CalculateFsrsResponse);
+  rpc CleanHtml(CleanHtmlRequest) returns (CleanHtmlResponse);
+  rpc PrepareImportMaterial(PrepareImportMaterialRequest) returns (PrepareImportMaterialResponse);
+}
+
+// --- CalculateFsrs ---
+
+message CalculateFsrsRequest {
+  string item_id = 1;
+  // Opaque JSON blob reserved for future FSRS state / ratings (UTF-8).
+  bytes payload_json = 2;
+}
+
+message CalculateFsrsResponse {
+  bool ok = 1;
+  string message = 2;
+  // Placeholder for future scheduling output (UTF-8 JSON).
+  bytes result_json = 3;
+}
+
+// --- CleanHtml ---
+
+message CleanHtmlRequest {
+  string source_id = 1;
+  string html = 2;
+}
+
+message CleanHtmlResponse {
+  bool ok = 1;
+  string message = 2;
+  string cleaned_html = 3;
+}
+
+// --- PrepareImportMaterial ---
+
+message PrepareImportMaterialRequest {
+  string import_job_id = 1;
+  string format_hint = 2;
+  bytes raw_bytes = 3;
+}
+
+message PrepareImportMaterialResponse {
+  bool ok = 1;
+  string message = 2;
+  // Placeholder for normalized material descriptor (UTF-8 JSON).
+  bytes prepared_json = 3;
+}
