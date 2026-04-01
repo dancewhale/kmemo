@@ -21,7 +21,10 @@ type Headless struct {
 
 // NewHeadless wires config and the Python gRPC client. No SQLite / indexing yet.
 func NewHeadless(ctx context.Context) (*Headless, error) {
-	cfg := config.Load()
+	cfg, err := config.Load()
+	if err != nil {
+		return nil, fmt.Errorf("load config: %w", err)
+	}
 	logger, err := zaplog.New(cfg.LogLevel)
 	if err != nil {
 		return nil, fmt.Errorf("create logger: %w", err)
