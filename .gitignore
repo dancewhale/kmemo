@@ -6,6 +6,7 @@ build/
 
 # Go
 *.test
+kmemo
 
 # Python
 __pycache__/

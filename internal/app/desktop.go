@@ -3,26 +3,34 @@ package app
 import (
 	"context"
 
+	"go.uber.org/zap"
+
 	"kmemo/internal/config"
 	"kmemo/internal/pyclient"
+	"kmemo/internal/zaplog"
 )
 
 // Desktop is bound to the Wails frontend. Keep methods small and delegate to internal/services later.
 type Desktop struct {
-	cfg config.Config
-	py  *pyclient.Client
+	cfg    config.Config
+	logger *zap.Logger
+	py     *pyclient.Client
 }
 
 // NewDesktop constructs the Wails-facing app shell.
-func NewDesktop(cfg config.Config, py *pyclient.Client) *Desktop {
-	return &Desktop{cfg: cfg, py: py}
+func NewDesktop(cfg config.Config, logger *zap.Logger, py *pyclient.Client) *Desktop {
+	if logger == nil {
+		logger = zaplog.Nop()
+	}
+	return &Desktop{cfg: cfg, logger: logger.Named("desktop"), py: py}
 }
 
 // OnStartup is registered with Wails for lifecycle hooks.
 func (d *Desktop) OnStartup(ctx context.Context) {
+	ctx = zaplog.WithLogger(ctx, d.logger)
+	ctx, _ = zaplog.EnsureRequestID(ctx)
 	// TODO: warm caches, migrate SQLite, verify Python health, etc.
-	_ = d.py
-	_ = ctx
+	zaplog.FromContext(ctx).Info("desktop startup")
 }
 
 // GetVersion returns a static label for the skeleton UI.
@@ -37,9 +45,16 @@ func (d *Desktop) PythonEndpoint() string {
 
 // OnShutdown releases host resources when the Wails app exits.
 func (d *Desktop) OnShutdown(ctx context.Context) {
-	_ = ctx
+	ctx = zaplog.WithLogger(ctx, d.logger)
+	ctx, _ = zaplog.EnsureRequestID(ctx)
+	logger := zaplog.FromContext(ctx)
 	if d == nil || d.py == nil {
+		logger.Info("desktop shutdown")
 		return
 	}
-	_ = d.py.Close()
+	if err := d.py.Close(); err != nil {
+		logger.Error("desktop shutdown close python client failed", zap.Error(err))
+		return
+	}
+	logger.Info("desktop shutdown")
 }

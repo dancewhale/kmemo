@@ -16,34 +16,50 @@ import grpc
 
 from kmemo.v1 import kmemo_pb2_grpc
 
+from app.grpc_logging import with_rpc_logging
+from app.logging_setup import configure_logging, get_logger
 from app.services import fsrs_service, html_service, import_service
 
-_LOG = logging.getLogger("kmemo.worker")
+_LOG = get_logger("kmemo.worker")
 
 
 class KmemoProcessor(kmemo_pb2_grpc.KmemoProcessorServicer):
     """Thin dispatcher; logic stays in app.services.* (placeholders for now)."""
 
     def CalculateFsrs(self, request, context):
-        _ = context
-        return fsrs_service.calculate_fsrs(request)
+        return with_rpc_logging(
+            context,
+            "CalculateFsrs",
+            lambda: fsrs_service.calculate_fsrs(request),
+        )
 
     def CleanHtml(self, request, context):
-        _ = context
-        return html_service.clean_html(request)
+        return with_rpc_logging(
+            context,
+            "CleanHtml",
+            lambda: html_service.clean_html(request),
+        )
 
     def PrepareImportMaterial(self, request, context):
-        _ = context
-        return import_service.prepare_import(request)
+        return with_rpc_logging(
+            context,
+            "PrepareImportMaterial",
+            lambda: import_service.prepare_import(request),
+        )
 
 
 def serve(address: str = "[::]:50051") -> None:
-    logging.basicConfig(level=logging.INFO)
+    configure_logging(logging.INFO)
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=4))
     kmemo_pb2_grpc.add_KmemoProcessorServicer_to_server(KmemoProcessor(), server)
     server.add_insecure_port(address)
     server.start()
-    _LOG.info("kmemo python worker listening on %s", address)
+    _LOG.info(
+        "worker started",
+        service="python-worker",
+        component="grpc_server",
+        target=address,
+    )
     server.wait_for_termination()
 
 

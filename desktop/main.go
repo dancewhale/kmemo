@@ -2,6 +2,8 @@ package main
 
 import (
 	"embed"
+	"fmt"
+	"os"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -9,6 +11,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options/linux"
 	"github.com/wailsapp/wails/v2/pkg/options/mac"
 	"github.com/wailsapp/wails/v2/pkg/options/windows"
+	"go.uber.org/zap"
 )
 
 //go:embed all:frontend/dist
@@ -17,8 +20,14 @@ var assets embed.FS
 func main() {
 	app, err := newApp()
 	if err != nil {
-		panic(err)
+		_, _ = fmt.Fprintf(os.Stderr, "kmemo desktop bootstrap failed: %v\n", err)
+		os.Exit(1)
 	}
+	defer func() {
+		if app.logger != nil {
+			_ = app.logger.Sync()
+		}
+	}()
 
 	err = wails.Run(&options.App{
 		Title:  "kmemo",
@@ -38,6 +47,7 @@ func main() {
 		Linux:   &linux.Options{},
 	})
 	if err != nil {
-		panic(err)
+		app.logger.Error("wails run failed", zap.Error(err))
+		os.Exit(1)
 	}
 }

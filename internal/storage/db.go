@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"time"
 
+	"kmemo/internal/zaplog"
+
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 	"gorm.io/gorm/schema"
 )
 
@@ -35,21 +36,8 @@ func openSQLite(opts Options) (*gorm.DB, error) {
 		// SQLite 下 card.cover_asset_id 与 asset.card_id 形成环依赖，迁移时跳过后端 FK 约束创建；
 		// 运行期仍通过 PRAGMA foreign_keys=ON 校验（若列级 FK 已写入 schema）。
 		DisableForeignKeyConstraintWhenMigrating: true,
+		Logger:                                   zaplog.NewGormLogger(opts.Logger, opts.LogLevel, opts.SlowThreshold, opts.RepositoryDebug),
 	}
-
-	logLevel := logger.Warn
-	switch opts.LogLevel {
-	case "silent":
-		logLevel = logger.Silent
-	case "error":
-		logLevel = logger.Error
-	case "warn":
-		logLevel = logger.Warn
-	case "info":
-		logLevel = logger.Info
-	}
-
-	cfg.Logger = logger.Default.LogMode(logLevel)
 
 	dialector := sqlite.Open(opts.DSN)
 	db, err := gorm.Open(dialector, cfg)

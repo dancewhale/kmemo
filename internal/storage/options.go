@@ -1,15 +1,24 @@
 package storage
 
-import "time"
+import (
+	"time"
+
+	"go.uber.org/zap"
+)
 
 // Options 配置存储层；DSN 使用各 driver 标准格式，便于切换 MySQL / PostgreSQL。
 //
 // SQLite 示例：
-//   file:/path/app.db?_pragma=foreign_keys(1)&_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)
+//
+//	file:/path/app.db?_pragma=foreign_keys(1)&_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)
+//
 // MySQL（未来）：
-//   user:pass@tcp(127.0.0.1:3306)/kmemo?charset=utf8mb4&parseTime=True&loc=Local
+//
+//	user:pass@tcp(127.0.0.1:3306)/kmemo?charset=utf8mb4&parseTime=True&loc=Local
+//
 // PostgreSQL（未来）：
-//   host=localhost user=kmemo password=secret dbname=kmemo sslmode=disable TimeZone=UTC
+//
+//	host=localhost user=kmemo password=secret dbname=kmemo sslmode=disable TimeZone=UTC
 type Options struct {
 	// Driver 默认 sqlite；切换数据库时改为 mysql / postgres 并配合 DSN。
 	Driver string
@@ -19,8 +28,14 @@ type Options struct {
 	// LogLevel GORM 日志级别：Silent / Error / Warn / Info
 	LogLevel string
 
-	// SlowThreshold 慢查询阈值；0 表示使用 GORM 默认。
+	// SlowThreshold 慢查询阈值；0 表示使用项目默认阈值。
 	SlowThreshold time.Duration
+
+	// RepositoryDebug 开启后输出详细 SQL 调试日志；默认仅输出慢查询和失败日志。
+	RepositoryDebug bool
+
+	// Logger 用于承接数据库边界日志；为空时使用 nop logger。
+	Logger *zap.Logger
 
 	// MaxOpenConns / MaxIdleConns / ConnMaxLifetime 透传给 sql.DB；SQLite 通常 MaxOpenConns=1。
 	MaxOpenConns    int
@@ -34,6 +49,9 @@ func (o *Options) normalize() {
 	}
 	if o.LogLevel == "" {
 		o.LogLevel = "warn"
+	}
+	if o.SlowThreshold <= 0 {
+		o.SlowThreshold = 200 * time.Millisecond
 	}
 	if o.MaxOpenConns == 0 && o.Driver == "sqlite" {
 		o.MaxOpenConns = 1
