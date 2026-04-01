@@ -30,9 +30,9 @@
 ```text
 Wails UI API
     ↓
-Application / Usecase 层
+Actions 层
     ↓
-Domain / Workflow 层
+Rules / Flows 层
     ↓
 Contracts + Adapters 层
     ↓
@@ -44,9 +44,9 @@ Repository / Database API 层
 ```text
 desktop/app.go + internal/app/desktop.go
     ↓
-internal/usecase/
+internal/actions/
     ↓
-internal/domain/ + internal/workflow/
+internal/rules/ + internal/flows/
     ↓
 internal/contracts/ + internal/adapters/
     ↓
@@ -55,8 +55,8 @@ internal/storage/repository/
 
 其中，`UI API` 到 `database API` 中间重点保留 **3 层**：
 
-1. `usecase`
-2. `domain/workflow`
+1. `actions`
+2. `rules/flows`
 3. `contracts/adapters`
 
 这是兼顾可读性与实际复杂度后的平衡方案。
@@ -78,7 +78,7 @@ internal/storage/repository/
 - 向 Wails 暴露方法
 - 接收前端参数，返回前端 DTO
 - 做最薄的一层参数转换和输入校验
-- 调用 usecase
+- 调用 actions
 - 不直接操作 repository
 - 不直接处理 Bleve、文件、HTML、Python gRPC
 
@@ -101,11 +101,11 @@ internal/storage/repository/
 
 ---
 
-## 3.2 Application / Usecase 层
+## 3.2 Actions 层
 
 **建议位置**：
 
-- `internal/usecase/`
+- `internal/actions/`
 
 **职责**：
 
@@ -117,15 +117,15 @@ internal/storage/repository/
 
 **这一层是未来理解系统最重要的一层。**
 
-读 usecase 应该能直接回答：
+读 action 应该能直接回答：
 
 - “创建卡片到底做了哪些事？”
 - “提交复习时依次发生了什么？”
 - “导入文档会更新哪些子系统？”
 
-### 典型 usecase 示例
+### 典型 action 示例
 
-#### CreateCardUsecase
+#### CreateCardAction
 
 负责：
 1. 校验 knowledge 是否存在
@@ -136,7 +136,7 @@ internal/storage/repository/
 6. 更新 Bleve 索引
 7. 返回 DTO
 
-#### SubmitReviewUsecase
+#### SubmitReviewAction
 
 负责：
 1. 获取卡片与当前 SRS
@@ -148,27 +148,27 @@ internal/storage/repository/
 
 ### 这一层的规则
 
-- usecase 可以依赖 repository 和 contracts
-- usecase 不应该直接依赖 Bleve、os.File、grpc 细节实现
-- usecase 不承载具体领域规则细节时，可下沉给 domain/workflow
+- actions 可以依赖 repository 和 contracts
+- actions 不应该直接依赖 Bleve、os.File、grpc 细节实现
+- actions 不承载具体业务规则细节时，可下沉给 rules/flows
 
 ---
 
-## 3.3 Domain / Workflow 层
+## 3.3 Rules / Flows 层
 
 建议拆成两个子方向：
 
-### A. `internal/domain/`
+### A. `internal/rules/`
 
-放 **稳定的业务概念、规则、状态转换**。
+放 **稳定的业务规则、约束、状态转换**。
 
-### B. `internal/workflow/`
+### B. `internal/flows/`
 
-放 **跨多个子系统的复杂流程**。
+放 **跨多个子系统的完整流程**。
 
 ---
 
-### 3.3.1 Domain 层职责
+### 3.3.1 Rules 层职责
 
 **适合放这里的内容**：
 
@@ -176,7 +176,7 @@ internal/storage/repository/
 - Review rating 的语义
 - 复习状态转换规则
 - 阅读队列的排序/过滤规则
-- 搜索文档的领域表示
+- 搜索文档的规则化表示
 - 导入后卡片生成的基本规则
 
 **不适合放这里的内容**：
@@ -186,7 +186,7 @@ internal/storage/repository/
 - 具体文件系统读写
 - 具体 grpc 调用
 
-### 3.3.2 Workflow 层职责
+### 3.3.2 Flows 层职责
 
 **适合放这里的内容**：
 
@@ -196,7 +196,7 @@ internal/storage/repository/
 - 从摘录生成卡片流程
 - 重建搜索索引流程
 
-### 为什么 domain/workflow 需要存在
+### 为什么 rules/flows 需要存在
 
 因为这个项目后续不是简单 CRUD，而是明显会出现大量“动作型功能”：
 
@@ -207,13 +207,13 @@ internal/storage/repository/
 - 生成阅读队列
 - 重建全文索引
 
-如果这些逻辑全部塞进 usecase，前期可行，后期会快速膨胀。
+如果这些逻辑全部塞进 actions，前期可行，后期会快速膨胀。
 
 因此建议：
 
-- **简单动作**：usecase 直接完成
-- **复杂动作**：usecase 调 workflow
-- **稳定规则**：放 domain
+- **简单动作**：actions 直接完成
+- **复杂动作**：actions 调 flows
+- **稳定规则**：放 rules
 
 ---
 
@@ -280,7 +280,7 @@ internal/adapters/
 - Python FSRS → Go 原生实现
 - Python HTML 清洗 → Go 实现
 
-而 usecase 不需要重写。
+而 actions 不需要重写。
 
 ---
 
@@ -321,7 +321,7 @@ internal/
 │       ├── review.go
 │       └── tag.go
 │
-├── usecase/                    # 应用层：面向前端动作
+├── actions/                    # 动作层：面向前端动作
 │   ├── knowledge/
 │   │   ├── create.go
 │   │   ├── list.go
@@ -340,14 +340,14 @@ internal/
 │   └── search/
 │       └── search_cards.go
 │
-├── workflow/                   # 复杂流程
+├── flows/                      # 完整流程
 │   ├── import_document.go
 │   ├── submit_review.go
 │   ├── undo_review.go
 │   ├── create_card_from_excerpt.go
 │   └── rebuild_index.go
 │
-├── domain/                     # 稳定领域规则
+├── rules/                      # 稳定业务规则
 │   ├── card/
 │   │   ├── types.go
 │   │   └── rules.go
@@ -394,8 +394,8 @@ internal/
 
 - 能力约定：`internal/contracts/search.go`
 - 适配实现：`internal/adapters/bleve/`
-- 搜索文档结构：`internal/domain/search/`
-- 索引编排：`internal/usecase/search/` 或 `internal/workflow/rebuild_index.go`
+- 搜索文档结构：`internal/rules/search/`
+- 索引编排：`internal/actions/search/` 或 `internal/flows/rebuild_index.go`
 
 ### 不建议放置
 
@@ -410,7 +410,7 @@ Bleve 是搜索基础设施，不是数据库本体。
 
 ### 当前阶段建议
 
-先采用 **usecase 内同步更新索引**：
+先采用 **actions 内同步更新索引**：
 
 1. DB 写入成功
 2. 文件保存成功
@@ -442,7 +442,7 @@ type HTMLProcessor interface {
 }
 ```
 
-这样 usecase 不需要知道：
+这样 actions 不需要知道：
 
 - 是 Go 本地清理
 - 还是 Python gRPC 清理
@@ -450,7 +450,7 @@ type HTMLProcessor interface {
 
 ### 原则
 
-HTML 的业务规则可以由 usecase/workflow 决定，
+HTML 的业务规则可以由 actions/flows 决定，
 但 HTML 的技术处理能力应收敛到 `HTMLProcessor` 接口后面。
 
 ---
@@ -529,8 +529,8 @@ data/
 
 ### 建议分层
 
-- 队列规则：`internal/domain/queue/`
-- 队列动作：`internal/usecase/queue/`
+- 队列规则：`internal/rules/queue/`
+- 队列动作：`internal/actions/queue/`
 - 如果未来落库存储：再增加对应 repository
 
 ### 前期建议
@@ -555,7 +555,7 @@ data/
 ### 原则
 
 - 前期把“规则”放 domain
-- 把“调度动作”放 usecase
+- 把“调度动作”放 actions
 - 不要过早数据库化
 
 ---
@@ -570,17 +570,23 @@ data/
 - `SubmitReview`
 - `GetDueCards`
 
-### Usecase 层
+### Actions 层
 
-- `CreateCardUsecase`
-- `SubmitReviewUsecase`
-- `SearchCardsUsecase`
+- `CreateCardAction`
+- `SubmitReviewAction`
+- `SearchCardsAction`
 
-### Workflow 层
+### Flows 层
 
-- `ImportDocumentWorkflow`
-- `UndoReviewWorkflow`
-- `RebuildIndexWorkflow`
+- `ImportDocumentFlow`
+- `UndoReviewFlow`
+- `RebuildIndexFlow`
+
+### Rules 层
+
+- `CardRules`
+- `ReviewStateRules`
+- `QueuePolicy`
 
 ### Contracts 层
 
@@ -631,7 +637,7 @@ UI -> facade -> service -> manager -> helper -> repository
 推荐保持：
 
 ```text
-UI -> usecase -> workflow/domain -> contracts/repository
+UI -> actions -> flows/rules -> contracts/repository
 ```
 
 ---
@@ -666,7 +672,7 @@ domain 只负责规则，不负责外部依赖。
 ```text
 Wails UI
   -> Desktop.CreateCard(req)
-  -> usecase/card/create.go
+  -> actions/card/create.go
       -> repository.Knowledge.GetByID
       -> contracts.HTMLProcessor.Clean
       -> contracts.FileStore.SaveHTML
@@ -678,7 +684,7 @@ Wails UI
 
 ### 理解收益
 
-读 `CreateCardUsecase` 时就能完整看见：
+读 `CreateCardAction` 时就能完整看见：
 
 - 数据如何进入系统
 - HTML 何时处理
@@ -693,13 +699,13 @@ Wails UI
 ```text
 Wails UI
   -> Desktop.SubmitReview(req)
-  -> usecase/review/submit.go
+  -> actions/review/submit.go
       -> repository.Card.GetByID
       -> repository.SRS.GetByCardID
       -> contracts.FSRSClient.Calculate
       -> repository.SRS.UpdateAfterReview
       -> repository.ReviewLog.Create / 或在事务内统一处理
-      -> usecase/queue 或 workflow 更新阅读状态（如需要）
+      -> actions/queue 或 flows 更新阅读状态（如需要）
   -> 返回新的 SRS 状态
 ```
 
@@ -711,7 +717,7 @@ Wails UI
 - repository 里
 - pyclient 里
 
-而是集中在一个明确的 usecase / workflow 中。
+而是集中在一个明确的 actions / flows 中。
 
 ---
 
@@ -726,11 +732,11 @@ Wails UI
 ```text
 internal/
 ├── app/
-├── usecase/
+├── actions/
 ├── contracts/
 ├── adapters/
 ├── storage/repository/
-├── workflow/   # 先少量使用
+├── flows/   # 先少量使用
 └── domain/     # 先只放稳定规则
 ```
 
@@ -740,15 +746,15 @@ internal/
 
 - 队列策略
 - 搜索文档建模
-- 导入流程 workflow
-- 索引重建 workflow
+- 导入流程 flows
+- 索引重建 flows
 - 更完整的 domain state machine
 
 ### 原则
 
 - 先把结构搭清楚
 - 不一开始做过重的 DDD
-- 复杂性增长时再扩 domain/workflow
+- 复杂性增长时再扩 domain/flows
 
 ---
 
@@ -759,15 +765,15 @@ internal/
 ### 总体 5 层
 
 1. UI API
-2. Usecase
-3. Domain / Workflow
+2. Actions
+3. Domain / Flows
 4. Contracts / Adapters
 5. Repository / Database API
 
 ### UI API 到 DB API 中间保留 3 层
 
-1. `usecase`
-2. `domain/workflow`
+1. `actions`
+2. `domain/flows`
 3. `contracts/adapters`
 
 ### 设计收益
@@ -782,4 +788,4 @@ internal/
 
 ### 一句话总结
 
-**让 UI 只表达入口，让 usecase 表达动作，让 domain/workflow 表达规则和流程，让 contracts/adapters 承担外部依赖，让 repository 只做数据持久化。**
+**让 UI 只表达入口，让 actions 表达动作，让 domain/flows 表达规则和流程，让 contracts/adapters 承担外部依赖，让 repository 只做数据持久化。**
