@@ -2,29 +2,78 @@ syntax = "proto3";
 
 package kmemo.v1;
 
+import "google/protobuf/timestamp.proto";
+
 option go_package = "kmemo/gen/kmemo/v1;kmemov1";
 
 // KmemoProcessor is invoked by the Go host; Python holds algorithms and heavy text work.
 // All RPCs are unary; streaming is intentionally omitted for now.
 service KmemoProcessor {
-  rpc CalculateFsrs(CalculateFsrsRequest) returns (CalculateFsrsResponse);
+  rpc SchedulerSetSetting(SchedulerSetSettingRequest) returns (SchedulerSetSettingResponse);
+  rpc SchedulerSchedule(SchedulerScheduleRequest) returns (SchedulerScheduleResponse);
   rpc CleanHtml(CleanHtmlRequest) returns (CleanHtmlResponse);
   rpc PrepareImportMaterial(PrepareImportMaterialRequest) returns (PrepareImportMaterialResponse);
 }
 
-// --- CalculateFsrs ---
+// --- FSRS Scheduler ---
 
-message CalculateFsrsRequest {
-  string item_id = 1;
-  // Opaque JSON blob reserved for future FSRS state / ratings (UTF-8).
-  bytes payload_json = 2;
+message SchedulerSetting {
+  repeated double parameters = 1;
+  optional double desired_retention = 2;
+  optional int32 maximum_interval = 3;
 }
 
-message CalculateFsrsResponse {
+message CardState {
+  string state = 1;
+  google.protobuf.Timestamp due = 2;
+  google.protobuf.Timestamp last_review = 3;
+  optional double stability = 4;
+  optional double difficulty = 5;
+  optional double elapsed_days = 6;
+  optional double scheduled_days = 7;
+  int32 reps = 8;
+  int32 lapses = 9;
+  optional string learning_steps_json = 10;
+}
+
+message ReviewInput {
+  int32 rating = 1;
+  google.protobuf.Timestamp reviewed_at = 2;
+}
+
+message ReviewLogSnapshot {
+  int32 rating = 1;
+  string review = 2;
+  double elapsed_days = 3;
+  double scheduled_days = 4;
+  optional double previous_stability = 5;
+  optional double previous_difficulty = 6;
+  optional double new_stability = 7;
+  optional double new_difficulty = 8;
+}
+
+message SchedulerSetSettingRequest {
+  SchedulerSetting setting = 1;
+}
+
+message SchedulerSetSettingResponse {
   bool ok = 1;
   string message = 2;
-  // Placeholder for future scheduling output (UTF-8 JSON).
-  bytes result_json = 3;
+  SchedulerSetting effective_setting = 3;
+}
+
+message SchedulerScheduleRequest {
+  string card_id = 1;
+  CardState current = 2;
+  ReviewInput review = 3;
+}
+
+message SchedulerScheduleResponse {
+  bool ok = 1;
+  string message = 2;
+  CardState next = 3;
+  ReviewLogSnapshot review_log = 4;
+  SchedulerSetting effective_setting = 5;
 }
 
 // --- CleanHtml ---

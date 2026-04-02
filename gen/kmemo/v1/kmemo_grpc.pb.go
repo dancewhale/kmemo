@@ -19,7 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	KmemoProcessor_CalculateFsrs_FullMethodName         = "/kmemo.v1.KmemoProcessor/CalculateFsrs"
+	KmemoProcessor_SchedulerSetSetting_FullMethodName   = "/kmemo.v1.KmemoProcessor/SchedulerSetSetting"
+	KmemoProcessor_SchedulerSchedule_FullMethodName     = "/kmemo.v1.KmemoProcessor/SchedulerSchedule"
 	KmemoProcessor_CleanHtml_FullMethodName             = "/kmemo.v1.KmemoProcessor/CleanHtml"
 	KmemoProcessor_PrepareImportMaterial_FullMethodName = "/kmemo.v1.KmemoProcessor/PrepareImportMaterial"
 )
@@ -31,7 +32,8 @@ const (
 // KmemoProcessor is invoked by the Go host; Python holds algorithms and heavy text work.
 // All RPCs are unary; streaming is intentionally omitted for now.
 type KmemoProcessorClient interface {
-	CalculateFsrs(ctx context.Context, in *CalculateFsrsRequest, opts ...grpc.CallOption) (*CalculateFsrsResponse, error)
+	SchedulerSetSetting(ctx context.Context, in *SchedulerSetSettingRequest, opts ...grpc.CallOption) (*SchedulerSetSettingResponse, error)
+	SchedulerSchedule(ctx context.Context, in *SchedulerScheduleRequest, opts ...grpc.CallOption) (*SchedulerScheduleResponse, error)
 	CleanHtml(ctx context.Context, in *CleanHtmlRequest, opts ...grpc.CallOption) (*CleanHtmlResponse, error)
 	PrepareImportMaterial(ctx context.Context, in *PrepareImportMaterialRequest, opts ...grpc.CallOption) (*PrepareImportMaterialResponse, error)
 }
@@ -44,10 +46,20 @@ func NewKmemoProcessorClient(cc grpc.ClientConnInterface) KmemoProcessorClient {
 	return &kmemoProcessorClient{cc}
 }
 
-func (c *kmemoProcessorClient) CalculateFsrs(ctx context.Context, in *CalculateFsrsRequest, opts ...grpc.CallOption) (*CalculateFsrsResponse, error) {
+func (c *kmemoProcessorClient) SchedulerSetSetting(ctx context.Context, in *SchedulerSetSettingRequest, opts ...grpc.CallOption) (*SchedulerSetSettingResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CalculateFsrsResponse)
-	err := c.cc.Invoke(ctx, KmemoProcessor_CalculateFsrs_FullMethodName, in, out, cOpts...)
+	out := new(SchedulerSetSettingResponse)
+	err := c.cc.Invoke(ctx, KmemoProcessor_SchedulerSetSetting_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *kmemoProcessorClient) SchedulerSchedule(ctx context.Context, in *SchedulerScheduleRequest, opts ...grpc.CallOption) (*SchedulerScheduleResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SchedulerScheduleResponse)
+	err := c.cc.Invoke(ctx, KmemoProcessor_SchedulerSchedule_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +93,8 @@ func (c *kmemoProcessorClient) PrepareImportMaterial(ctx context.Context, in *Pr
 // KmemoProcessor is invoked by the Go host; Python holds algorithms and heavy text work.
 // All RPCs are unary; streaming is intentionally omitted for now.
 type KmemoProcessorServer interface {
-	CalculateFsrs(context.Context, *CalculateFsrsRequest) (*CalculateFsrsResponse, error)
+	SchedulerSetSetting(context.Context, *SchedulerSetSettingRequest) (*SchedulerSetSettingResponse, error)
+	SchedulerSchedule(context.Context, *SchedulerScheduleRequest) (*SchedulerScheduleResponse, error)
 	CleanHtml(context.Context, *CleanHtmlRequest) (*CleanHtmlResponse, error)
 	PrepareImportMaterial(context.Context, *PrepareImportMaterialRequest) (*PrepareImportMaterialResponse, error)
 	mustEmbedUnimplementedKmemoProcessorServer()
@@ -94,8 +107,11 @@ type KmemoProcessorServer interface {
 // pointer dereference when methods are called.
 type UnimplementedKmemoProcessorServer struct{}
 
-func (UnimplementedKmemoProcessorServer) CalculateFsrs(context.Context, *CalculateFsrsRequest) (*CalculateFsrsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CalculateFsrs not implemented")
+func (UnimplementedKmemoProcessorServer) SchedulerSetSetting(context.Context, *SchedulerSetSettingRequest) (*SchedulerSetSettingResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SchedulerSetSetting not implemented")
+}
+func (UnimplementedKmemoProcessorServer) SchedulerSchedule(context.Context, *SchedulerScheduleRequest) (*SchedulerScheduleResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SchedulerSchedule not implemented")
 }
 func (UnimplementedKmemoProcessorServer) CleanHtml(context.Context, *CleanHtmlRequest) (*CleanHtmlResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CleanHtml not implemented")
@@ -124,20 +140,38 @@ func RegisterKmemoProcessorServer(s grpc.ServiceRegistrar, srv KmemoProcessorSer
 	s.RegisterService(&KmemoProcessor_ServiceDesc, srv)
 }
 
-func _KmemoProcessor_CalculateFsrs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CalculateFsrsRequest)
+func _KmemoProcessor_SchedulerSetSetting_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SchedulerSetSettingRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(KmemoProcessorServer).CalculateFsrs(ctx, in)
+		return srv.(KmemoProcessorServer).SchedulerSetSetting(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: KmemoProcessor_CalculateFsrs_FullMethodName,
+		FullMethod: KmemoProcessor_SchedulerSetSetting_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(KmemoProcessorServer).CalculateFsrs(ctx, req.(*CalculateFsrsRequest))
+		return srv.(KmemoProcessorServer).SchedulerSetSetting(ctx, req.(*SchedulerSetSettingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _KmemoProcessor_SchedulerSchedule_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SchedulerScheduleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(KmemoProcessorServer).SchedulerSchedule(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: KmemoProcessor_SchedulerSchedule_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(KmemoProcessorServer).SchedulerSchedule(ctx, req.(*SchedulerScheduleRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -186,8 +220,12 @@ var KmemoProcessor_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*KmemoProcessorServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "CalculateFsrs",
-			Handler:    _KmemoProcessor_CalculateFsrs_Handler,
+			MethodName: "SchedulerSetSetting",
+			Handler:    _KmemoProcessor_SchedulerSetSetting_Handler,
+		},
+		{
+			MethodName: "SchedulerSchedule",
+			Handler:    _KmemoProcessor_SchedulerSchedule_Handler,
 		},
 		{
 			MethodName: "CleanHtml",

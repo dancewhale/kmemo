@@ -36,10 +36,15 @@ class KmemoProcessorStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.CalculateFsrs = channel.unary_unary(
-                '/kmemo.v1.KmemoProcessor/CalculateFsrs',
-                request_serializer=kmemo_dot_v1_dot_kmemo__pb2.CalculateFsrsRequest.SerializeToString,
-                response_deserializer=kmemo_dot_v1_dot_kmemo__pb2.CalculateFsrsResponse.FromString,
+        self.SchedulerSetSetting = channel.unary_unary(
+                '/kmemo.v1.KmemoProcessor/SchedulerSetSetting',
+                request_serializer=kmemo_dot_v1_dot_kmemo__pb2.SchedulerSetSettingRequest.SerializeToString,
+                response_deserializer=kmemo_dot_v1_dot_kmemo__pb2.SchedulerSetSettingResponse.FromString,
+                _registered_method=True)
+        self.SchedulerSchedule = channel.unary_unary(
+                '/kmemo.v1.KmemoProcessor/SchedulerSchedule',
+                request_serializer=kmemo_dot_v1_dot_kmemo__pb2.SchedulerScheduleRequest.SerializeToString,
+                response_deserializer=kmemo_dot_v1_dot_kmemo__pb2.SchedulerScheduleResponse.FromString,
                 _registered_method=True)
         self.CleanHtml = channel.unary_unary(
                 '/kmemo.v1.KmemoProcessor/CleanHtml',
@@ -58,7 +63,13 @@ class KmemoProcessorServicer(object):
     All RPCs are unary; streaming is intentionally omitted for now.
     """
 
-    def CalculateFsrs(self, request, context):
+    def SchedulerSetSetting(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def SchedulerSchedule(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -79,10 +90,15 @@ class KmemoProcessorServicer(object):
 
 def add_KmemoProcessorServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'CalculateFsrs': grpc.unary_unary_rpc_method_handler(
-                    servicer.CalculateFsrs,
-                    request_deserializer=kmemo_dot_v1_dot_kmemo__pb2.CalculateFsrsRequest.FromString,
-                    response_serializer=kmemo_dot_v1_dot_kmemo__pb2.CalculateFsrsResponse.SerializeToString,
+            'SchedulerSetSetting': grpc.unary_unary_rpc_method_handler(
+                    servicer.SchedulerSetSetting,
+                    request_deserializer=kmemo_dot_v1_dot_kmemo__pb2.SchedulerSetSettingRequest.FromString,
+                    response_serializer=kmemo_dot_v1_dot_kmemo__pb2.SchedulerSetSettingResponse.SerializeToString,
+            ),
+            'SchedulerSchedule': grpc.unary_unary_rpc_method_handler(
+                    servicer.SchedulerSchedule,
+                    request_deserializer=kmemo_dot_v1_dot_kmemo__pb2.SchedulerScheduleRequest.FromString,
+                    response_serializer=kmemo_dot_v1_dot_kmemo__pb2.SchedulerScheduleResponse.SerializeToString,
             ),
             'CleanHtml': grpc.unary_unary_rpc_method_handler(
                     servicer.CleanHtml,
@@ -108,7 +124,7 @@ class KmemoProcessor(object):
     """
 
     @staticmethod
-    def CalculateFsrs(request,
+    def SchedulerSetSetting(request,
             target,
             options=(),
             channel_credentials=None,
@@ -121,9 +137,36 @@ class KmemoProcessor(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/kmemo.v1.KmemoProcessor/CalculateFsrs',
-            kmemo_dot_v1_dot_kmemo__pb2.CalculateFsrsRequest.SerializeToString,
-            kmemo_dot_v1_dot_kmemo__pb2.CalculateFsrsResponse.FromString,
+            '/kmemo.v1.KmemoProcessor/SchedulerSetSetting',
+            kmemo_dot_v1_dot_kmemo__pb2.SchedulerSetSettingRequest.SerializeToString,
+            kmemo_dot_v1_dot_kmemo__pb2.SchedulerSetSettingResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def SchedulerSchedule(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/kmemo.v1.KmemoProcessor/SchedulerSchedule',
+            kmemo_dot_v1_dot_kmemo__pb2.SchedulerScheduleRequest.SerializeToString,
+            kmemo_dot_v1_dot_kmemo__pb2.SchedulerScheduleResponse.FromString,
             options,
             channel_credentials,
             insecure,

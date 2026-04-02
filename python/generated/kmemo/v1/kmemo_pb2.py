@@ -22,9 +22,10 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
+from google.protobuf import timestamp_pb2 as google_dot_protobuf_dot_timestamp__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x14kmemo/v1/kmemo.proto\x12\x08kmemo.v1\"=\n\x14\x43\x61lculateFsrsRequest\x12\x0f\n\x07item_id\x18\x01 \x01(\t\x12\x14\n\x0cpayload_json\x18\x02 \x01(\x0c\"I\n\x15\x43\x61lculateFsrsResponse\x12\n\n\x02ok\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\x12\x13\n\x0bresult_json\x18\x03 \x01(\x0c\"3\n\x10\x43leanHtmlRequest\x12\x11\n\tsource_id\x18\x01 \x01(\t\x12\x0c\n\x04html\x18\x02 \x01(\t\"F\n\x11\x43leanHtmlResponse\x12\n\n\x02ok\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\x12\x14\n\x0c\x63leaned_html\x18\x03 \x01(\t\"]\n\x1cPrepareImportMaterialRequest\x12\x15\n\rimport_job_id\x18\x01 \x01(\t\x12\x13\n\x0b\x66ormat_hint\x18\x02 \x01(\t\x12\x11\n\traw_bytes\x18\x03 \x01(\x0c\"S\n\x1dPrepareImportMaterialResponse\x12\n\n\x02ok\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\x12\x15\n\rprepared_json\x18\x03 \x01(\x0c\x32\x92\x02\n\x0eKmemoProcessor\x12P\n\rCalculateFsrs\x12\x1e.kmemo.v1.CalculateFsrsRequest\x1a\x1f.kmemo.v1.CalculateFsrsResponse\x12\x44\n\tCleanHtml\x12\x1a.kmemo.v1.CleanHtmlRequest\x1a\x1b.kmemo.v1.CleanHtmlResponse\x12h\n\x15PrepareImportMaterial\x12&.kmemo.v1.PrepareImportMaterialRequest\x1a\'.kmemo.v1.PrepareImportMaterialResponseB\x1cZ\x1akmemo/gen/kmemo/v1;kmemov1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x14kmemo/v1/kmemo.proto\x12\x08kmemo.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x90\x01\n\x10SchedulerSetting\x12\x12\n\nparameters\x18\x01 \x03(\x01\x12\x1e\n\x11\x64\x65sired_retention\x18\x02 \x01(\x01H\x00\x88\x01\x01\x12\x1d\n\x10maximum_interval\x18\x03 \x01(\x05H\x01\x88\x01\x01\x42\x14\n\x12_desired_retentionB\x13\n\x11_maximum_interval\"\xf6\x02\n\tCardState\x12\r\n\x05state\x18\x01 \x01(\t\x12\'\n\x03\x64ue\x18\x02 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12/\n\x0blast_review\x18\x03 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x16\n\tstability\x18\x04 \x01(\x01H\x00\x88\x01\x01\x12\x17\n\ndifficulty\x18\x05 \x01(\x01H\x01\x88\x01\x01\x12\x19\n\x0c\x65lapsed_days\x18\x06 \x01(\x01H\x02\x88\x01\x01\x12\x1b\n\x0escheduled_days\x18\x07 \x01(\x01H\x03\x88\x01\x01\x12\x0c\n\x04reps\x18\x08 \x01(\x05\x12\x0e\n\x06lapses\x18\t \x01(\x05\x12 \n\x13learning_steps_json\x18\n \x01(\tH\x04\x88\x01\x01\x42\x0c\n\n_stabilityB\r\n\x0b_difficultyB\x0f\n\r_elapsed_daysB\x11\n\x0f_scheduled_daysB\x16\n\x14_learning_steps_json\"N\n\x0bReviewInput\x12\x0e\n\x06rating\x18\x01 \x01(\x05\x12/\n\x0breviewed_at\x18\x02 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\"\xb1\x02\n\x11ReviewLogSnapshot\x12\x0e\n\x06rating\x18\x01 \x01(\x05\x12\x0e\n\x06review\x18\x02 \x01(\t\x12\x14\n\x0c\x65lapsed_days\x18\x03 \x01(\x01\x12\x16\n\x0escheduled_days\x18\x04 \x01(\x01\x12\x1f\n\x12previous_stability\x18\x05 \x01(\x01H\x00\x88\x01\x01\x12 \n\x13previous_difficulty\x18\x06 \x01(\x01H\x01\x88\x01\x01\x12\x1a\n\rnew_stability\x18\x07 \x01(\x01H\x02\x88\x01\x01\x12\x1b\n\x0enew_difficulty\x18\x08 \x01(\x01H\x03\x88\x01\x01\x42\x15\n\x13_previous_stabilityB\x16\n\x14_previous_difficultyB\x10\n\x0e_new_stabilityB\x11\n\x0f_new_difficulty\"I\n\x1aSchedulerSetSettingRequest\x12+\n\x07setting\x18\x01 \x01(\x0b\x32\x1a.kmemo.v1.SchedulerSetting\"q\n\x1bSchedulerSetSettingResponse\x12\n\n\x02ok\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\x12\x35\n\x11\x65\x66\x66\x65\x63tive_setting\x18\x03 \x01(\x0b\x32\x1a.kmemo.v1.SchedulerSetting\"x\n\x18SchedulerScheduleRequest\x12\x0f\n\x07\x63\x61rd_id\x18\x01 \x01(\t\x12$\n\x07\x63urrent\x18\x02 \x01(\x0b\x32\x13.kmemo.v1.CardState\x12%\n\x06review\x18\x03 \x01(\x0b\x32\x15.kmemo.v1.ReviewInput\"\xc3\x01\n\x19SchedulerScheduleResponse\x12\n\n\x02ok\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\x12!\n\x04next\x18\x03 \x01(\x0b\x32\x13.kmemo.v1.CardState\x12/\n\nreview_log\x18\x04 \x01(\x0b\x32\x1b.kmemo.v1.ReviewLogSnapshot\x12\x35\n\x11\x65\x66\x66\x65\x63tive_setting\x18\x05 \x01(\x0b\x32\x1a.kmemo.v1.SchedulerSetting\"3\n\x10\x43leanHtmlRequest\x12\x11\n\tsource_id\x18\x01 \x01(\t\x12\x0c\n\x04html\x18\x02 \x01(\t\"F\n\x11\x43leanHtmlResponse\x12\n\n\x02ok\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\x12\x14\n\x0c\x63leaned_html\x18\x03 \x01(\t\"]\n\x1cPrepareImportMaterialRequest\x12\x15\n\rimport_job_id\x18\x01 \x01(\t\x12\x13\n\x0b\x66ormat_hint\x18\x02 \x01(\t\x12\x11\n\traw_bytes\x18\x03 \x01(\x0c\"S\n\x1dPrepareImportMaterialResponse\x12\n\n\x02ok\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\x12\x15\n\rprepared_json\x18\x03 \x01(\x0c\x32\x82\x03\n\x0eKmemoProcessor\x12\x62\n\x13SchedulerSetSetting\x12$.kmemo.v1.SchedulerSetSettingRequest\x1a%.kmemo.v1.SchedulerSetSettingResponse\x12\\\n\x11SchedulerSchedule\x12\".kmemo.v1.SchedulerScheduleRequest\x1a#.kmemo.v1.SchedulerScheduleResponse\x12\x44\n\tCleanHtml\x12\x1a.kmemo.v1.CleanHtmlRequest\x1a\x1b.kmemo.v1.CleanHtmlResponse\x12h\n\x15PrepareImportMaterial\x12&.kmemo.v1.PrepareImportMaterialRequest\x1a\'.kmemo.v1.PrepareImportMaterialResponseB\x1cZ\x1akmemo/gen/kmemo/v1;kmemov1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -32,18 +33,30 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'kmemo.v1.kmemo_pb2', _globa
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'Z\032kmemo/gen/kmemo/v1;kmemov1'
-  _globals['_CALCULATEFSRSREQUEST']._serialized_start=34
-  _globals['_CALCULATEFSRSREQUEST']._serialized_end=95
-  _globals['_CALCULATEFSRSRESPONSE']._serialized_start=97
-  _globals['_CALCULATEFSRSRESPONSE']._serialized_end=170
-  _globals['_CLEANHTMLREQUEST']._serialized_start=172
-  _globals['_CLEANHTMLREQUEST']._serialized_end=223
-  _globals['_CLEANHTMLRESPONSE']._serialized_start=225
-  _globals['_CLEANHTMLRESPONSE']._serialized_end=295
-  _globals['_PREPAREIMPORTMATERIALREQUEST']._serialized_start=297
-  _globals['_PREPAREIMPORTMATERIALREQUEST']._serialized_end=390
-  _globals['_PREPAREIMPORTMATERIALRESPONSE']._serialized_start=392
-  _globals['_PREPAREIMPORTMATERIALRESPONSE']._serialized_end=475
-  _globals['_KMEMOPROCESSOR']._serialized_start=478
-  _globals['_KMEMOPROCESSOR']._serialized_end=752
+  _globals['_SCHEDULERSETTING']._serialized_start=68
+  _globals['_SCHEDULERSETTING']._serialized_end=212
+  _globals['_CARDSTATE']._serialized_start=215
+  _globals['_CARDSTATE']._serialized_end=589
+  _globals['_REVIEWINPUT']._serialized_start=591
+  _globals['_REVIEWINPUT']._serialized_end=669
+  _globals['_REVIEWLOGSNAPSHOT']._serialized_start=672
+  _globals['_REVIEWLOGSNAPSHOT']._serialized_end=977
+  _globals['_SCHEDULERSETSETTINGREQUEST']._serialized_start=979
+  _globals['_SCHEDULERSETSETTINGREQUEST']._serialized_end=1052
+  _globals['_SCHEDULERSETSETTINGRESPONSE']._serialized_start=1054
+  _globals['_SCHEDULERSETSETTINGRESPONSE']._serialized_end=1167
+  _globals['_SCHEDULERSCHEDULEREQUEST']._serialized_start=1169
+  _globals['_SCHEDULERSCHEDULEREQUEST']._serialized_end=1289
+  _globals['_SCHEDULERSCHEDULERESPONSE']._serialized_start=1292
+  _globals['_SCHEDULERSCHEDULERESPONSE']._serialized_end=1487
+  _globals['_CLEANHTMLREQUEST']._serialized_start=1489
+  _globals['_CLEANHTMLREQUEST']._serialized_end=1540
+  _globals['_CLEANHTMLRESPONSE']._serialized_start=1542
+  _globals['_CLEANHTMLRESPONSE']._serialized_end=1612
+  _globals['_PREPAREIMPORTMATERIALREQUEST']._serialized_start=1614
+  _globals['_PREPAREIMPORTMATERIALREQUEST']._serialized_end=1707
+  _globals['_PREPAREIMPORTMATERIALRESPONSE']._serialized_start=1709
+  _globals['_PREPAREIMPORTMATERIALRESPONSE']._serialized_end=1792
+  _globals['_KMEMOPROCESSOR']._serialized_start=1795
+  _globals['_KMEMOPROCESSOR']._serialized_end=2181
 # @@protoc_insertion_point(module_scope)

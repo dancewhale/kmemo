@@ -26,11 +26,18 @@ _LOG = get_logger("kmemo.worker")
 class KmemoProcessor(kmemo_pb2_grpc.KmemoProcessorServicer):
     """Thin dispatcher; logic stays in app.services.* (placeholders for now)."""
 
-    def CalculateFsrs(self, request, context):
+    def SchedulerSetSetting(self, request, context):
         return with_rpc_logging(
             context,
-            "CalculateFsrs",
-            lambda: fsrs_service.calculate_fsrs(request),
+            "SchedulerSetSetting",
+            lambda: fsrs_service.scheduler_set_setting(request),
+        )
+
+    def SchedulerSchedule(self, request, context):
+        return with_rpc_logging(
+            context,
+            "SchedulerSchedule",
+            lambda: fsrs_service.scheduler_schedule(request),
         )
 
     def CleanHtml(self, request, context):

@@ -50,6 +50,16 @@ func New(ctx context.Context, cfg config.Config) (*Client, error) {
 	}, nil
 }
 
+// SetFSRSSetting updates the Python worker scheduler setting.
+func (c *Client) SetFSRSSetting(ctx context.Context, req *kmemov1.SchedulerSetSettingRequest) (*kmemov1.SchedulerSetSettingResponse, error) {
+	return c.api.SchedulerSetSetting(ctx, req)
+}
+
+// ScheduleFSRS runs a typed scheduler calculation against the Python worker.
+func (c *Client) ScheduleFSRS(ctx context.Context, req *kmemov1.SchedulerScheduleRequest) (*kmemov1.SchedulerScheduleResponse, error) {
+	return c.api.SchedulerSchedule(ctx, req)
+}
+
 // API exposes the raw generated client for future service layers.
 // TODO: remove direct exposure once facades in internal/services exist.
 func (c *Client) API() kmemov1.KmemoProcessorClient {
