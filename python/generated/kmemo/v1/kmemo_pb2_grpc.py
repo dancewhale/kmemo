@@ -41,10 +41,25 @@ class KmemoProcessorStub(object):
                 request_serializer=kmemo_dot_v1_dot_kmemo__pb2.SchedulerSetSettingRequest.SerializeToString,
                 response_deserializer=kmemo_dot_v1_dot_kmemo__pb2.SchedulerSetSettingResponse.FromString,
                 _registered_method=True)
-        self.SchedulerSchedule = channel.unary_unary(
-                '/kmemo.v1.KmemoProcessor/SchedulerSchedule',
-                request_serializer=kmemo_dot_v1_dot_kmemo__pb2.SchedulerScheduleRequest.SerializeToString,
-                response_deserializer=kmemo_dot_v1_dot_kmemo__pb2.SchedulerScheduleResponse.FromString,
+        self.GetCardRetrievability = channel.unary_unary(
+                '/kmemo.v1.KmemoProcessor/GetCardRetrievability',
+                request_serializer=kmemo_dot_v1_dot_kmemo__pb2.GetCardRetrievabilityRequest.SerializeToString,
+                response_deserializer=kmemo_dot_v1_dot_kmemo__pb2.GetCardRetrievabilityResponse.FromString,
+                _registered_method=True)
+        self.ReviewCard = channel.unary_unary(
+                '/kmemo.v1.KmemoProcessor/ReviewCard',
+                request_serializer=kmemo_dot_v1_dot_kmemo__pb2.ReviewCardRequest.SerializeToString,
+                response_deserializer=kmemo_dot_v1_dot_kmemo__pb2.ReviewCardResponse.FromString,
+                _registered_method=True)
+        self.RescheduleCard = channel.unary_unary(
+                '/kmemo.v1.KmemoProcessor/RescheduleCard',
+                request_serializer=kmemo_dot_v1_dot_kmemo__pb2.RescheduleCardRequest.SerializeToString,
+                response_deserializer=kmemo_dot_v1_dot_kmemo__pb2.RescheduleCardResponse.FromString,
+                _registered_method=True)
+        self.OptimizeParameters = channel.unary_unary(
+                '/kmemo.v1.KmemoProcessor/OptimizeParameters',
+                request_serializer=kmemo_dot_v1_dot_kmemo__pb2.OptimizeParametersRequest.SerializeToString,
+                response_deserializer=kmemo_dot_v1_dot_kmemo__pb2.OptimizeParametersResponse.FromString,
                 _registered_method=True)
         self.CleanHtml = channel.unary_unary(
                 '/kmemo.v1.KmemoProcessor/CleanHtml',
@@ -69,7 +84,25 @@ class KmemoProcessorServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def SchedulerSchedule(self, request, context):
+    def GetCardRetrievability(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ReviewCard(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def RescheduleCard(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def OptimizeParameters(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -95,10 +128,25 @@ def add_KmemoProcessorServicer_to_server(servicer, server):
                     request_deserializer=kmemo_dot_v1_dot_kmemo__pb2.SchedulerSetSettingRequest.FromString,
                     response_serializer=kmemo_dot_v1_dot_kmemo__pb2.SchedulerSetSettingResponse.SerializeToString,
             ),
-            'SchedulerSchedule': grpc.unary_unary_rpc_method_handler(
-                    servicer.SchedulerSchedule,
-                    request_deserializer=kmemo_dot_v1_dot_kmemo__pb2.SchedulerScheduleRequest.FromString,
-                    response_serializer=kmemo_dot_v1_dot_kmemo__pb2.SchedulerScheduleResponse.SerializeToString,
+            'GetCardRetrievability': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetCardRetrievability,
+                    request_deserializer=kmemo_dot_v1_dot_kmemo__pb2.GetCardRetrievabilityRequest.FromString,
+                    response_serializer=kmemo_dot_v1_dot_kmemo__pb2.GetCardRetrievabilityResponse.SerializeToString,
+            ),
+            'ReviewCard': grpc.unary_unary_rpc_method_handler(
+                    servicer.ReviewCard,
+                    request_deserializer=kmemo_dot_v1_dot_kmemo__pb2.ReviewCardRequest.FromString,
+                    response_serializer=kmemo_dot_v1_dot_kmemo__pb2.ReviewCardResponse.SerializeToString,
+            ),
+            'RescheduleCard': grpc.unary_unary_rpc_method_handler(
+                    servicer.RescheduleCard,
+                    request_deserializer=kmemo_dot_v1_dot_kmemo__pb2.RescheduleCardRequest.FromString,
+                    response_serializer=kmemo_dot_v1_dot_kmemo__pb2.RescheduleCardResponse.SerializeToString,
+            ),
+            'OptimizeParameters': grpc.unary_unary_rpc_method_handler(
+                    servicer.OptimizeParameters,
+                    request_deserializer=kmemo_dot_v1_dot_kmemo__pb2.OptimizeParametersRequest.FromString,
+                    response_serializer=kmemo_dot_v1_dot_kmemo__pb2.OptimizeParametersResponse.SerializeToString,
             ),
             'CleanHtml': grpc.unary_unary_rpc_method_handler(
                     servicer.CleanHtml,
@@ -151,7 +199,7 @@ class KmemoProcessor(object):
             _registered_method=True)
 
     @staticmethod
-    def SchedulerSchedule(request,
+    def GetCardRetrievability(request,
             target,
             options=(),
             channel_credentials=None,
@@ -164,9 +212,90 @@ class KmemoProcessor(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/kmemo.v1.KmemoProcessor/SchedulerSchedule',
-            kmemo_dot_v1_dot_kmemo__pb2.SchedulerScheduleRequest.SerializeToString,
-            kmemo_dot_v1_dot_kmemo__pb2.SchedulerScheduleResponse.FromString,
+            '/kmemo.v1.KmemoProcessor/GetCardRetrievability',
+            kmemo_dot_v1_dot_kmemo__pb2.GetCardRetrievabilityRequest.SerializeToString,
+            kmemo_dot_v1_dot_kmemo__pb2.GetCardRetrievabilityResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ReviewCard(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/kmemo.v1.KmemoProcessor/ReviewCard',
+            kmemo_dot_v1_dot_kmemo__pb2.ReviewCardRequest.SerializeToString,
+            kmemo_dot_v1_dot_kmemo__pb2.ReviewCardResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RescheduleCard(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/kmemo.v1.KmemoProcessor/RescheduleCard',
+            kmemo_dot_v1_dot_kmemo__pb2.RescheduleCardRequest.SerializeToString,
+            kmemo_dot_v1_dot_kmemo__pb2.RescheduleCardResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def OptimizeParameters(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/kmemo.v1.KmemoProcessor/OptimizeParameters',
+            kmemo_dot_v1_dot_kmemo__pb2.OptimizeParametersRequest.SerializeToString,
+            kmemo_dot_v1_dot_kmemo__pb2.OptimizeParametersResponse.FromString,
             options,
             channel_credentials,
             insecure,

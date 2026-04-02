@@ -10,7 +10,10 @@ option go_package = "kmemo/gen/kmemo/v1;kmemov1";
 // All RPCs are unary; streaming is intentionally omitted for now.
 service KmemoProcessor {
   rpc SchedulerSetSetting(SchedulerSetSettingRequest) returns (SchedulerSetSettingResponse);
-  rpc SchedulerSchedule(SchedulerScheduleRequest) returns (SchedulerScheduleResponse);
+  rpc GetCardRetrievability(GetCardRetrievabilityRequest) returns (GetCardRetrievabilityResponse);
+  rpc ReviewCard(ReviewCardRequest) returns (ReviewCardResponse);
+  rpc RescheduleCard(RescheduleCardRequest) returns (RescheduleCardResponse);
+  rpc OptimizeParameters(OptimizeParametersRequest) returns (OptimizeParametersResponse);
   rpc CleanHtml(CleanHtmlRequest) returns (CleanHtmlResponse);
   rpc PrepareImportMaterial(PrepareImportMaterialRequest) returns (PrepareImportMaterialResponse);
 }
@@ -50,6 +53,28 @@ message ReviewLogSnapshot {
   optional double previous_difficulty = 6;
   optional double new_stability = 7;
   optional double new_difficulty = 8;
+  google.protobuf.Timestamp reviewed_at = 9;
+}
+
+message OptimizerReviewLogEntry {
+  string card_id = 1;
+  int32 rating = 2;
+  google.protobuf.Timestamp reviewed_at = 3;
+  CardState card_before = 4;
+  CardState card_after = 5;
+}
+
+message OptimizerConfig {
+  optional int32 max_iterations = 1;
+  optional bool float_delta_t = 2;
+  optional bool enable_short_term = 3;
+}
+
+message OptimizerMetrics {
+  optional double rmse_bins = 1;
+  optional double log_loss = 2;
+  optional double calibration = 3;
+  optional double optimal_retention = 4;
 }
 
 message SchedulerSetSettingRequest {
@@ -57,23 +82,73 @@ message SchedulerSetSettingRequest {
 }
 
 message SchedulerSetSettingResponse {
-  bool ok = 1;
-  string message = 2;
-  SchedulerSetting effective_setting = 3;
+  SchedulerSetting effective_setting = 1;
+  repeated string warnings = 2;
+  optional string diagnostics = 3;
 }
 
-message SchedulerScheduleRequest {
+message GetCardRetrievabilityRequest {
   string card_id = 1;
-  CardState current = 2;
+  CardState card = 2;
+  google.protobuf.Timestamp now = 3;
+}
+
+message GetCardRetrievabilityResponse {
+  double retrievability = 1;
+  google.protobuf.Timestamp evaluated_at = 2;
+  SchedulerSetting effective_setting = 3;
+  repeated string warnings = 4;
+  optional string diagnostics = 5;
+}
+
+message ReviewCardRequest {
+  string card_id = 1;
+  CardState card = 2;
   ReviewInput review = 3;
 }
 
-message SchedulerScheduleResponse {
-  bool ok = 1;
-  string message = 2;
-  CardState next = 3;
-  ReviewLogSnapshot review_log = 4;
-  SchedulerSetting effective_setting = 5;
+message ReviewCardResponse {
+  CardState card = 1;
+  ReviewLogSnapshot review_log = 2;
+  optional double retrievability = 3;
+  SchedulerSetting effective_setting = 4;
+  repeated string warnings = 5;
+  optional string diagnostics = 6;
+}
+
+message RescheduleCardRequest {
+  string card_id = 1;
+  CardState card = 2;
+  google.protobuf.Timestamp reschedule_at = 3;
+  repeated ReviewLogSnapshot review_logs = 4;
+  optional string mode = 5;
+}
+
+message RescheduleCardResponse {
+  CardState card = 1;
+  ReviewLogSnapshot review_log = 2;
+  optional double retrievability = 3;
+  SchedulerSetting effective_setting = 4;
+  repeated string warnings = 5;
+  optional string diagnostics = 6;
+}
+
+message OptimizeParametersRequest {
+  string request_id = 1;
+  string dataset_id = 2;
+  string knowledge_id = 3;
+  repeated OptimizerReviewLogEntry review_logs = 4;
+  SchedulerSetting baseline_setting = 5;
+  OptimizerConfig config = 6;
+}
+
+message OptimizeParametersResponse {
+  SchedulerSetting optimized_setting = 1;
+  OptimizerMetrics metrics = 2;
+  int32 sample_count = 3;
+  int32 dropped_sample_count = 4;
+  repeated string warnings = 5;
+  optional string diagnostics = 6;
 }
 
 // --- CleanHtml ---

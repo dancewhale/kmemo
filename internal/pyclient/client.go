@@ -55,9 +55,24 @@ func (c *Client) SetFSRSSetting(ctx context.Context, req *kmemov1.SchedulerSetSe
 	return c.api.SchedulerSetSetting(ctx, req)
 }
 
-// ScheduleFSRS runs a typed scheduler calculation against the Python worker.
-func (c *Client) ScheduleFSRS(ctx context.Context, req *kmemov1.SchedulerScheduleRequest) (*kmemov1.SchedulerScheduleResponse, error) {
-	return c.api.SchedulerSchedule(ctx, req)
+// GetCardRetrievability computes card retrievability via the Python worker.
+func (c *Client) GetCardRetrievability(ctx context.Context, req *kmemov1.GetCardRetrievabilityRequest) (*kmemov1.GetCardRetrievabilityResponse, error) {
+	return c.api.GetCardRetrievability(ctx, req)
+}
+
+// ReviewCard runs a typed FSRS review calculation against the Python worker.
+func (c *Client) ReviewCard(ctx context.Context, req *kmemov1.ReviewCardRequest) (*kmemov1.ReviewCardResponse, error) {
+	return c.api.ReviewCard(ctx, req)
+}
+
+// RescheduleCard recalculates a typed FSRS card schedule against the Python worker.
+func (c *Client) RescheduleCard(ctx context.Context, req *kmemov1.RescheduleCardRequest) (*kmemov1.RescheduleCardResponse, error) {
+	return c.api.RescheduleCard(ctx, req)
+}
+
+// OptimizeParameters trains FSRS parameters via the Python worker.
+func (c *Client) OptimizeParameters(ctx context.Context, req *kmemov1.OptimizeParametersRequest) (*kmemov1.OptimizeParametersResponse, error) {
+	return c.api.OptimizeParameters(ctx, req)
 }
 
 // API exposes the raw generated client for future service layers.

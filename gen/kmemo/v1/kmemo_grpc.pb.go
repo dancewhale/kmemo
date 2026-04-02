@@ -20,7 +20,10 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	KmemoProcessor_SchedulerSetSetting_FullMethodName   = "/kmemo.v1.KmemoProcessor/SchedulerSetSetting"
-	KmemoProcessor_SchedulerSchedule_FullMethodName     = "/kmemo.v1.KmemoProcessor/SchedulerSchedule"
+	KmemoProcessor_GetCardRetrievability_FullMethodName = "/kmemo.v1.KmemoProcessor/GetCardRetrievability"
+	KmemoProcessor_ReviewCard_FullMethodName            = "/kmemo.v1.KmemoProcessor/ReviewCard"
+	KmemoProcessor_RescheduleCard_FullMethodName        = "/kmemo.v1.KmemoProcessor/RescheduleCard"
+	KmemoProcessor_OptimizeParameters_FullMethodName    = "/kmemo.v1.KmemoProcessor/OptimizeParameters"
 	KmemoProcessor_CleanHtml_FullMethodName             = "/kmemo.v1.KmemoProcessor/CleanHtml"
 	KmemoProcessor_PrepareImportMaterial_FullMethodName = "/kmemo.v1.KmemoProcessor/PrepareImportMaterial"
 )
@@ -33,7 +36,10 @@ const (
 // All RPCs are unary; streaming is intentionally omitted for now.
 type KmemoProcessorClient interface {
 	SchedulerSetSetting(ctx context.Context, in *SchedulerSetSettingRequest, opts ...grpc.CallOption) (*SchedulerSetSettingResponse, error)
-	SchedulerSchedule(ctx context.Context, in *SchedulerScheduleRequest, opts ...grpc.CallOption) (*SchedulerScheduleResponse, error)
+	GetCardRetrievability(ctx context.Context, in *GetCardRetrievabilityRequest, opts ...grpc.CallOption) (*GetCardRetrievabilityResponse, error)
+	ReviewCard(ctx context.Context, in *ReviewCardRequest, opts ...grpc.CallOption) (*ReviewCardResponse, error)
+	RescheduleCard(ctx context.Context, in *RescheduleCardRequest, opts ...grpc.CallOption) (*RescheduleCardResponse, error)
+	OptimizeParameters(ctx context.Context, in *OptimizeParametersRequest, opts ...grpc.CallOption) (*OptimizeParametersResponse, error)
 	CleanHtml(ctx context.Context, in *CleanHtmlRequest, opts ...grpc.CallOption) (*CleanHtmlResponse, error)
 	PrepareImportMaterial(ctx context.Context, in *PrepareImportMaterialRequest, opts ...grpc.CallOption) (*PrepareImportMaterialResponse, error)
 }
@@ -56,10 +62,40 @@ func (c *kmemoProcessorClient) SchedulerSetSetting(ctx context.Context, in *Sche
 	return out, nil
 }
 
-func (c *kmemoProcessorClient) SchedulerSchedule(ctx context.Context, in *SchedulerScheduleRequest, opts ...grpc.CallOption) (*SchedulerScheduleResponse, error) {
+func (c *kmemoProcessorClient) GetCardRetrievability(ctx context.Context, in *GetCardRetrievabilityRequest, opts ...grpc.CallOption) (*GetCardRetrievabilityResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SchedulerScheduleResponse)
-	err := c.cc.Invoke(ctx, KmemoProcessor_SchedulerSchedule_FullMethodName, in, out, cOpts...)
+	out := new(GetCardRetrievabilityResponse)
+	err := c.cc.Invoke(ctx, KmemoProcessor_GetCardRetrievability_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *kmemoProcessorClient) ReviewCard(ctx context.Context, in *ReviewCardRequest, opts ...grpc.CallOption) (*ReviewCardResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReviewCardResponse)
+	err := c.cc.Invoke(ctx, KmemoProcessor_ReviewCard_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *kmemoProcessorClient) RescheduleCard(ctx context.Context, in *RescheduleCardRequest, opts ...grpc.CallOption) (*RescheduleCardResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RescheduleCardResponse)
+	err := c.cc.Invoke(ctx, KmemoProcessor_RescheduleCard_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *kmemoProcessorClient) OptimizeParameters(ctx context.Context, in *OptimizeParametersRequest, opts ...grpc.CallOption) (*OptimizeParametersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(OptimizeParametersResponse)
+	err := c.cc.Invoke(ctx, KmemoProcessor_OptimizeParameters_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +130,10 @@ func (c *kmemoProcessorClient) PrepareImportMaterial(ctx context.Context, in *Pr
 // All RPCs are unary; streaming is intentionally omitted for now.
 type KmemoProcessorServer interface {
 	SchedulerSetSetting(context.Context, *SchedulerSetSettingRequest) (*SchedulerSetSettingResponse, error)
-	SchedulerSchedule(context.Context, *SchedulerScheduleRequest) (*SchedulerScheduleResponse, error)
+	GetCardRetrievability(context.Context, *GetCardRetrievabilityRequest) (*GetCardRetrievabilityResponse, error)
+	ReviewCard(context.Context, *ReviewCardRequest) (*ReviewCardResponse, error)
+	RescheduleCard(context.Context, *RescheduleCardRequest) (*RescheduleCardResponse, error)
+	OptimizeParameters(context.Context, *OptimizeParametersRequest) (*OptimizeParametersResponse, error)
 	CleanHtml(context.Context, *CleanHtmlRequest) (*CleanHtmlResponse, error)
 	PrepareImportMaterial(context.Context, *PrepareImportMaterialRequest) (*PrepareImportMaterialResponse, error)
 	mustEmbedUnimplementedKmemoProcessorServer()
@@ -110,8 +149,17 @@ type UnimplementedKmemoProcessorServer struct{}
 func (UnimplementedKmemoProcessorServer) SchedulerSetSetting(context.Context, *SchedulerSetSettingRequest) (*SchedulerSetSettingResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SchedulerSetSetting not implemented")
 }
-func (UnimplementedKmemoProcessorServer) SchedulerSchedule(context.Context, *SchedulerScheduleRequest) (*SchedulerScheduleResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SchedulerSchedule not implemented")
+func (UnimplementedKmemoProcessorServer) GetCardRetrievability(context.Context, *GetCardRetrievabilityRequest) (*GetCardRetrievabilityResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCardRetrievability not implemented")
+}
+func (UnimplementedKmemoProcessorServer) ReviewCard(context.Context, *ReviewCardRequest) (*ReviewCardResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReviewCard not implemented")
+}
+func (UnimplementedKmemoProcessorServer) RescheduleCard(context.Context, *RescheduleCardRequest) (*RescheduleCardResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RescheduleCard not implemented")
+}
+func (UnimplementedKmemoProcessorServer) OptimizeParameters(context.Context, *OptimizeParametersRequest) (*OptimizeParametersResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method OptimizeParameters not implemented")
 }
 func (UnimplementedKmemoProcessorServer) CleanHtml(context.Context, *CleanHtmlRequest) (*CleanHtmlResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CleanHtml not implemented")
@@ -158,20 +206,74 @@ func _KmemoProcessor_SchedulerSetSetting_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
-func _KmemoProcessor_SchedulerSchedule_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SchedulerScheduleRequest)
+func _KmemoProcessor_GetCardRetrievability_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCardRetrievabilityRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(KmemoProcessorServer).SchedulerSchedule(ctx, in)
+		return srv.(KmemoProcessorServer).GetCardRetrievability(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: KmemoProcessor_SchedulerSchedule_FullMethodName,
+		FullMethod: KmemoProcessor_GetCardRetrievability_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(KmemoProcessorServer).SchedulerSchedule(ctx, req.(*SchedulerScheduleRequest))
+		return srv.(KmemoProcessorServer).GetCardRetrievability(ctx, req.(*GetCardRetrievabilityRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _KmemoProcessor_ReviewCard_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReviewCardRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(KmemoProcessorServer).ReviewCard(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: KmemoProcessor_ReviewCard_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(KmemoProcessorServer).ReviewCard(ctx, req.(*ReviewCardRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _KmemoProcessor_RescheduleCard_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RescheduleCardRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(KmemoProcessorServer).RescheduleCard(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: KmemoProcessor_RescheduleCard_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(KmemoProcessorServer).RescheduleCard(ctx, req.(*RescheduleCardRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _KmemoProcessor_OptimizeParameters_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(OptimizeParametersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(KmemoProcessorServer).OptimizeParameters(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: KmemoProcessor_OptimizeParameters_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(KmemoProcessorServer).OptimizeParameters(ctx, req.(*OptimizeParametersRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -224,8 +326,20 @@ var KmemoProcessor_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _KmemoProcessor_SchedulerSetSetting_Handler,
 		},
 		{
-			MethodName: "SchedulerSchedule",
-			Handler:    _KmemoProcessor_SchedulerSchedule_Handler,
+			MethodName: "GetCardRetrievability",
+			Handler:    _KmemoProcessor_GetCardRetrievability_Handler,
+		},
+		{
+			MethodName: "ReviewCard",
+			Handler:    _KmemoProcessor_ReviewCard_Handler,
+		},
+		{
+			MethodName: "RescheduleCard",
+			Handler:    _KmemoProcessor_RescheduleCard_Handler,
+		},
+		{
+			MethodName: "OptimizeParameters",
+			Handler:    _KmemoProcessor_OptimizeParameters_Handler,
 		},
 		{
 			MethodName: "CleanHtml",

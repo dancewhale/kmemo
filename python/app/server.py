@@ -33,11 +33,32 @@ class KmemoProcessor(kmemo_pb2_grpc.KmemoProcessorServicer):
             lambda: fsrs_service.scheduler_set_setting(request),
         )
 
-    def SchedulerSchedule(self, request, context):
+    def GetCardRetrievability(self, request, context):
         return with_rpc_logging(
             context,
-            "SchedulerSchedule",
-            lambda: fsrs_service.scheduler_schedule(request),
+            "GetCardRetrievability",
+            lambda: fsrs_service.get_card_retrievability(request),
+        )
+
+    def ReviewCard(self, request, context):
+        return with_rpc_logging(
+            context,
+            "ReviewCard",
+            lambda: fsrs_service.review_card(request),
+        )
+
+    def RescheduleCard(self, request, context):
+        return with_rpc_logging(
+            context,
+            "RescheduleCard",
+            lambda: fsrs_service.reschedule_card(request),
+        )
+
+    def OptimizeParameters(self, request, context):
+        return with_rpc_logging(
+            context,
+            "OptimizeParameters",
+            lambda: fsrs_service.optimize_parameters(request),
         )
 
     def CleanHtml(self, request, context):
