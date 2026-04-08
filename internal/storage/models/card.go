@@ -14,9 +14,9 @@ type Card struct {
 	Path string `gorm:"column:path;type:text;not null;default:'';index:idx_card_path"`
 	// CardType: article / excerpt / qa / cloze / note，驱动前端模板与交互。
 	CardType string `gorm:"column:card_type;type:text;not null;index"`
-	// HTMLPath / AnswerHTMLPath 为相对应用数据根的路径，与 Asset.storage_path 一致策略。
-	HTMLPath       string  `gorm:"column:html_path;type:text;not null;default:''"`
-	AnswerHTMLPath *string `gorm:"column:answer_html_path;type:text"`
+	// Slug 从 Title 派生，用于可读文件名
+	Slug string `gorm:"column:slug;type:text;not null;default:''"`
+	// HTMLHash / AnswerHTMLHash 用于内容完整性校验
 	HTMLHash       string  `gorm:"column:html_hash;type:text;not null;default:''"`
 	AnswerHTMLHash *string `gorm:"column:answer_html_hash;type:text"`
 	SourceRef      *string `gorm:"column:source_ref;type:text"`

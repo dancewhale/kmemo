@@ -106,6 +106,7 @@ func normalizeConfig(paths runtimePaths, raw rawConfig) (Config, error) {
 	cfg.IndexDir = filepath.Join(cfg.DataDir, defaultIndexDirName)
 	cfg.ExportDir = filepath.Join(cfg.DataDir, defaultExportDirName)
 	cfg.CardFileDir = filepath.Join(cfg.DataDir, defaultCardFileDirName)
+	cfg.VaultDir = filepath.Join(cfg.DataDir, "vault")
 	cfg.ThumbsCacheDir = filepath.Join(cfg.CacheDir, defaultThumbnailsDirName)
 	cfg.HTMLCacheDir = filepath.Join(cfg.CacheDir, defaultHTMLCacheDirName)
 	cfg.IndexCacheDir = filepath.Join(cfg.CacheDir, defaultIndexCacheDirName)

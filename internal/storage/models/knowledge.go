@@ -39,13 +39,15 @@ type SourceDocument struct {
 	OriginalURI string `gorm:"column:original_uri;type:text"`
 	// OriginalHash 用于检测来源是否变更、是否需重新转换。
 	OriginalHash string `gorm:"column:original_hash;type:text"`
-	// FilePath 指向已转换的主 HTML 等资源，供渲染器直接加载。
-	FilePath  string `gorm:"column:file_path;type:text"`
+	// Slug 从文件名派生，用于可读文件名
+	Slug string `gorm:"column:slug;type:text;not null;default:''"`
+	// Ext 原始文件扩展名
+	Ext       string `gorm:"column:ext;type:text;not null"`
 	CreatedAt time.Time `gorm:"column:created_at;not null"`
 	UpdatedAt time.Time `gorm:"column:updated_at;not null"`
 
 	Knowledge *Knowledge `gorm:"foreignKey:KnowledgeID"`
-	Cards     []Card       `gorm:"foreignKey:SourceDocumentID"`
+	Cards     []Card     `gorm:"foreignKey:SourceDocumentID"`
 }
 
 func (SourceDocument) TableName() string {

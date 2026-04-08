@@ -35,7 +35,8 @@ func newSourceDocument(db *gorm.DB, opts ...gen.DOOption) sourceDocument {
 	_sourceDocument.Author = field.NewString(tableName, "author")
 	_sourceDocument.OriginalURI = field.NewString(tableName, "original_uri")
 	_sourceDocument.OriginalHash = field.NewString(tableName, "original_hash")
-	_sourceDocument.FilePath = field.NewString(tableName, "file_path")
+	_sourceDocument.Slug = field.NewString(tableName, "slug")
+	_sourceDocument.Ext = field.NewString(tableName, "ext")
 	_sourceDocument.CreatedAt = field.NewTime(tableName, "created_at")
 	_sourceDocument.UpdatedAt = field.NewTime(tableName, "updated_at")
 	_sourceDocument.Cards = sourceDocumentHasManyCards{
@@ -211,7 +212,8 @@ type sourceDocument struct {
 	Author       field.String
 	OriginalURI  field.String
 	OriginalHash field.String
-	FilePath     field.String
+	Slug         field.String
+	Ext          field.String
 	CreatedAt    field.Time
 	UpdatedAt    field.Time
 	Cards        sourceDocumentHasManyCards
@@ -240,7 +242,8 @@ func (s *sourceDocument) updateTableName(table string) *sourceDocument {
 	s.Author = field.NewString(table, "author")
 	s.OriginalURI = field.NewString(table, "original_uri")
 	s.OriginalHash = field.NewString(table, "original_hash")
-	s.FilePath = field.NewString(table, "file_path")
+	s.Slug = field.NewString(table, "slug")
+	s.Ext = field.NewString(table, "ext")
 	s.CreatedAt = field.NewTime(table, "created_at")
 	s.UpdatedAt = field.NewTime(table, "updated_at")
 
@@ -271,7 +274,7 @@ func (s *sourceDocument) GetFieldByName(fieldName string) (field.OrderExpr, bool
 }
 
 func (s *sourceDocument) fillFieldMap() {
-	s.fieldMap = make(map[string]field.Expr, 12)
+	s.fieldMap = make(map[string]field.Expr, 13)
 	s.fieldMap["id"] = s.ID
 	s.fieldMap["knowledge_id"] = s.KnowledgeID
 	s.fieldMap["source_type"] = s.SourceType
@@ -279,7 +282,8 @@ func (s *sourceDocument) fillFieldMap() {
 	s.fieldMap["author"] = s.Author
 	s.fieldMap["original_uri"] = s.OriginalURI
 	s.fieldMap["original_hash"] = s.OriginalHash
-	s.fieldMap["file_path"] = s.FilePath
+	s.fieldMap["slug"] = s.Slug
+	s.fieldMap["ext"] = s.Ext
 	s.fieldMap["created_at"] = s.CreatedAt
 	s.fieldMap["updated_at"] = s.UpdatedAt
 

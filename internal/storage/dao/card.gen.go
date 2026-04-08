@@ -36,8 +36,7 @@ func newCard(db *gorm.DB, opts ...gen.DOOption) card {
 	_card.SortOrder = field.NewInt(tableName, "sort_order")
 	_card.Path = field.NewString(tableName, "path")
 	_card.CardType = field.NewString(tableName, "card_type")
-	_card.HTMLPath = field.NewString(tableName, "html_path")
-	_card.AnswerHTMLPath = field.NewString(tableName, "answer_html_path")
+	_card.Slug = field.NewString(tableName, "slug")
 	_card.HTMLHash = field.NewString(tableName, "html_hash")
 	_card.AnswerHTMLHash = field.NewString(tableName, "answer_html_hash")
 	_card.SourceRef = field.NewString(tableName, "source_ref")
@@ -313,8 +312,7 @@ type card struct {
 	SortOrder        field.Int
 	Path             field.String
 	CardType         field.String
-	HTMLPath         field.String
-	AnswerHTMLPath   field.String
+	Slug             field.String
 	HTMLHash         field.String
 	AnswerHTMLHash   field.String
 	SourceRef        field.String
@@ -365,8 +363,7 @@ func (c *card) updateTableName(table string) *card {
 	c.SortOrder = field.NewInt(table, "sort_order")
 	c.Path = field.NewString(table, "path")
 	c.CardType = field.NewString(table, "card_type")
-	c.HTMLPath = field.NewString(table, "html_path")
-	c.AnswerHTMLPath = field.NewString(table, "answer_html_path")
+	c.Slug = field.NewString(table, "slug")
 	c.HTMLHash = field.NewString(table, "html_hash")
 	c.AnswerHTMLHash = field.NewString(table, "answer_html_hash")
 	c.SourceRef = field.NewString(table, "source_ref")
@@ -402,7 +399,7 @@ func (c *card) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (c *card) fillFieldMap() {
-	c.fieldMap = make(map[string]field.Expr, 29)
+	c.fieldMap = make(map[string]field.Expr, 28)
 	c.fieldMap["id"] = c.ID
 	c.fieldMap["knowledge_id"] = c.KnowledgeID
 	c.fieldMap["source_document_id"] = c.SourceDocumentID
@@ -411,8 +408,7 @@ func (c *card) fillFieldMap() {
 	c.fieldMap["sort_order"] = c.SortOrder
 	c.fieldMap["path"] = c.Path
 	c.fieldMap["card_type"] = c.CardType
-	c.fieldMap["html_path"] = c.HTMLPath
-	c.fieldMap["answer_html_path"] = c.AnswerHTMLPath
+	c.fieldMap["slug"] = c.Slug
 	c.fieldMap["html_hash"] = c.HTMLHash
 	c.fieldMap["answer_html_hash"] = c.AnswerHTMLHash
 	c.fieldMap["source_ref"] = c.SourceRef

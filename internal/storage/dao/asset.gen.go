@@ -31,7 +31,10 @@ func newAsset(db *gorm.DB, opts ...gen.DOOption) asset {
 	_asset.ID = field.NewString(tableName, "id")
 	_asset.CardID = field.NewString(tableName, "card_id")
 	_asset.Kind = field.NewString(tableName, "kind")
-	_asset.StoragePath = field.NewString(tableName, "storage_path")
+	_asset.Slug = field.NewString(tableName, "slug")
+	_asset.Ext = field.NewString(tableName, "ext")
+	_asset.MimeType = field.NewString(tableName, "mime_type")
+	_asset.Size = field.NewInt64(tableName, "size")
 	_asset.Checksum = field.NewString(tableName, "checksum")
 	_asset.Status = field.NewString(tableName, "status")
 	_asset.CreatedAt = field.NewTime(tableName, "created_at")
@@ -196,17 +199,20 @@ func newAsset(db *gorm.DB, opts ...gen.DOOption) asset {
 type asset struct {
 	assetDo assetDo
 
-	ALL         field.Asterisk
-	ID          field.String
-	CardID      field.String
-	Kind        field.String
-	StoragePath field.String
-	Checksum    field.String
-	Status      field.String
-	CreatedAt   field.Time
-	UpdatedAt   field.Time
-	DeletedAt   field.Field
-	Card        assetBelongsToCard
+	ALL       field.Asterisk
+	ID        field.String
+	CardID    field.String
+	Kind      field.String
+	Slug      field.String
+	Ext       field.String
+	MimeType  field.String
+	Size      field.Int64
+	Checksum  field.String
+	Status    field.String
+	CreatedAt field.Time
+	UpdatedAt field.Time
+	DeletedAt field.Field
+	Card      assetBelongsToCard
 
 	fieldMap map[string]field.Expr
 }
@@ -226,7 +232,10 @@ func (a *asset) updateTableName(table string) *asset {
 	a.ID = field.NewString(table, "id")
 	a.CardID = field.NewString(table, "card_id")
 	a.Kind = field.NewString(table, "kind")
-	a.StoragePath = field.NewString(table, "storage_path")
+	a.Slug = field.NewString(table, "slug")
+	a.Ext = field.NewString(table, "ext")
+	a.MimeType = field.NewString(table, "mime_type")
+	a.Size = field.NewInt64(table, "size")
 	a.Checksum = field.NewString(table, "checksum")
 	a.Status = field.NewString(table, "status")
 	a.CreatedAt = field.NewTime(table, "created_at")
@@ -256,11 +265,14 @@ func (a *asset) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (a *asset) fillFieldMap() {
-	a.fieldMap = make(map[string]field.Expr, 10)
+	a.fieldMap = make(map[string]field.Expr, 13)
 	a.fieldMap["id"] = a.ID
 	a.fieldMap["card_id"] = a.CardID
 	a.fieldMap["kind"] = a.Kind
-	a.fieldMap["storage_path"] = a.StoragePath
+	a.fieldMap["slug"] = a.Slug
+	a.fieldMap["ext"] = a.Ext
+	a.fieldMap["mime_type"] = a.MimeType
+	a.fieldMap["size"] = a.Size
 	a.fieldMap["checksum"] = a.Checksum
 	a.fieldMap["status"] = a.Status
 	a.fieldMap["created_at"] = a.CreatedAt

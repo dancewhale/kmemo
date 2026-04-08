@@ -11,6 +11,7 @@ type Config struct {
 	DataDir    string
 	CacheDir   string
 	LogsDir    string
+	VaultDir   string
 	AssetsDir  string
 	ImportsDir string
 	IndexDir   string
