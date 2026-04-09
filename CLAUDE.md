@@ -69,7 +69,7 @@ The Go host communicates with Python via gRPC defined in `proto/kmemo/v1/kmemo.p
 - **CleanHtml**: HTML sanitization and processing
 - **PrepareImportMaterial**: Import format conversion
 
-Go client: `internal/pyclient/client.go` wraps the generated gRPC client.
+Go side: shared dial in `internal/adapters/grpcworker/client.go`; FSRS port in `internal/contracts/fsrs` with Python implementation `internal/adapters/fsrs/grpc_python` (see `docs/contracts/fsrs-port-and-adapter-design.md`).
 Python server: `python/app/server.py` implements the KmemoProcessor service.
 
 Environment variables:

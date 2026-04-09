@@ -5,8 +5,8 @@ import (
 
 	"go.uber.org/zap"
 
+	"kmemo/internal/adapters/grpcworker"
 	"kmemo/internal/config"
-	"kmemo/internal/pyclient"
 	"kmemo/internal/zaplog"
 )
 
@@ -14,15 +14,15 @@ import (
 type Desktop struct {
 	cfg    config.Config
 	logger *zap.Logger
-	py     *pyclient.Client
+	worker *grpcworker.Client
 }
 
 // NewDesktop constructs the Wails-facing app shell.
-func NewDesktop(cfg config.Config, logger *zap.Logger, py *pyclient.Client) *Desktop {
+func NewDesktop(cfg config.Config, logger *zap.Logger, worker *grpcworker.Client) *Desktop {
 	if logger == nil {
 		logger = zaplog.Nop()
 	}
-	return &Desktop{cfg: cfg, logger: logger.Named("desktop"), py: py}
+	return &Desktop{cfg: cfg, logger: logger.Named("desktop"), worker: worker}
 }
 
 // OnStartup is registered with Wails for lifecycle hooks.
@@ -48,12 +48,12 @@ func (d *Desktop) OnShutdown(ctx context.Context) {
 	ctx = zaplog.WithLogger(ctx, d.logger)
 	ctx, _ = zaplog.EnsureRequestID(ctx)
 	logger := zaplog.FromContext(ctx)
-	if d == nil || d.py == nil {
+	if d == nil || d.worker == nil {
 		logger.Info("desktop shutdown")
 		return
 	}
-	if err := d.py.Close(); err != nil {
-		logger.Error("desktop shutdown close python client failed", zap.Error(err))
+	if err := d.worker.Close(); err != nil {
+		logger.Error("desktop shutdown close grpc worker failed", zap.Error(err))
 		return
 	}
 	logger.Info("desktop shutdown")

@@ -3,24 +3,24 @@ package services
 import (
 	"context"
 
-	"kmemo/internal/pyclient"
+	"kmemo/internal/contracts/fsrs"
 )
 
 // Orchestrator is the future façade over storage, HTML, indexing, and Python RPC.
 // Skeleton only: no scheduling or import pipelines yet.
 type Orchestrator struct {
-	py *pyclient.Client
+	scheduler fsrs.FSRSScheduler
 }
 
 // NewOrchestrator constructs a placeholder coordinator.
-func NewOrchestrator(py *pyclient.Client) *Orchestrator {
-	return &Orchestrator{py: py}
+func NewOrchestrator(sched fsrs.FSRSScheduler) *Orchestrator {
+	return &Orchestrator{scheduler: sched}
 }
 
 // PingPython is a no-op placeholder for health checks.
 func (o *Orchestrator) PingPython(ctx context.Context) error {
 	// TODO: replace with a cheap RPC or channel health probe when defined.
 	_ = ctx
-	_ = o.py
+	_ = o.scheduler
 	return nil
 }

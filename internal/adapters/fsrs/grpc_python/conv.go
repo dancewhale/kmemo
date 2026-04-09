@@ -1,4 +1,4 @@
-package pyclient
+package grpcpython
 
 import (
 	"encoding/json"
@@ -11,6 +11,9 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+// --- Outbound: models / app types → protobuf (requests) ---
+
+// SettingFromFSRSParameter maps a stored FSRS preset into a protobuf SchedulerSetting.
 func SettingFromFSRSParameter(param *models.FSRSParameter) (*kmemov1.SchedulerSetting, error) {
 	if param == nil {
 		return nil, fmt.Errorf("fsrs parameter is nil")
@@ -34,6 +37,7 @@ func SettingFromFSRSParameter(param *models.FSRSParameter) (*kmemov1.SchedulerSe
 	return setting, nil
 }
 
+// CardStateFromModel maps CardSRS into protobuf CardState for RPC requests.
 func CardStateFromModel(card *models.CardSRS) *kmemov1.CardState {
 	if card == nil {
 		return &kmemov1.CardState{State: "new"}
@@ -67,47 +71,41 @@ func CardStateFromModel(card *models.CardSRS) *kmemov1.CardState {
 	return state
 }
 
-func ReviewInput(rating int, reviewedAt time.Time) *kmemov1.ReviewInput {
+func reviewInputProto(rating int, reviewedAt time.Time) *kmemov1.ReviewInput {
 	return &kmemov1.ReviewInput{
 		Rating:     int32(rating),
 		ReviewedAt: timestamppb.New(reviewedAt.UTC()),
 	}
 }
 
-func RetrievabilityRequestFromModel(card *models.CardSRS, now time.Time) *kmemov1.GetCardRetrievabilityRequest {
-	cardID := ""
-	if card != nil {
-		cardID = card.CardID
-	}
+// RetrievabilityRequest builds GetCardRetrievabilityRequest. cardID may be empty if prior carries CardID.
+func RetrievabilityRequest(cardID string, prior *models.CardSRS, now time.Time) *kmemov1.GetCardRetrievabilityRequest {
+	cardID = effectiveCardID(cardID, prior)
 	return &kmemov1.GetCardRetrievabilityRequest{
 		CardId: cardID,
-		Card:   CardStateFromModel(card),
+		Card:   CardStateFromModel(prior),
 		Now:    timestamppb.New(now.UTC()),
 	}
 }
 
-func ReviewCardRequestFromModel(card *models.CardSRS, rating int, reviewedAt time.Time) *kmemov1.ReviewCardRequest {
-	cardID := ""
-	if card != nil {
-		cardID = card.CardID
-	}
+// ReviewCardRequest builds ReviewCardRequest. cardID may be empty if prior carries CardID.
+func ReviewCardRequest(cardID string, prior *models.CardSRS, rating int, reviewedAt time.Time) *kmemov1.ReviewCardRequest {
+	cardID = effectiveCardID(cardID, prior)
 	return &kmemov1.ReviewCardRequest{
 		CardId: cardID,
-		Card:   CardStateFromModel(card),
-		Review: ReviewInput(rating, reviewedAt),
+		Card:   CardStateFromModel(prior),
+		Review: reviewInputProto(rating, reviewedAt),
 	}
 }
 
-func RescheduleCardRequestFromModel(card *models.CardSRS, reviewLogs []*models.ReviewLog, rescheduleAt time.Time, mode string) *kmemov1.RescheduleCardRequest {
-	cardID := ""
-	if card != nil {
-		cardID = card.CardID
-	}
+// RescheduleCardRequest builds RescheduleCardRequest.
+func RescheduleCardRequest(cardID string, prior *models.CardSRS, reviewLogs []*models.ReviewLog, rescheduleAt time.Time, mode string) *kmemov1.RescheduleCardRequest {
+	cardID = effectiveCardID(cardID, prior)
 	request := &kmemov1.RescheduleCardRequest{
 		CardId:       cardID,
-		Card:         CardStateFromModel(card),
+		Card:         CardStateFromModel(prior),
 		RescheduleAt: timestamppb.New(rescheduleAt.UTC()),
-		ReviewLogs:   ReviewLogsToProto(reviewLogs),
+		ReviewLogs:   reviewLogsToProto(reviewLogs),
 	}
 	if mode != "" {
 		request.Mode = &mode
@@ -115,12 +113,13 @@ func RescheduleCardRequestFromModel(card *models.CardSRS, reviewLogs []*models.R
 	return request
 }
 
-func OptimizeParametersRequestFromModels(requestID, datasetID, knowledgeID string, reviewLogs []*models.ReviewLog, baseline *models.FSRSParameter) (*kmemov1.OptimizeParametersRequest, error) {
+// OptimizeParametersRequest builds OptimizeParametersRequest.
+func OptimizeParametersRequest(requestID, datasetID, knowledgeID string, reviewLogs []*models.ReviewLog, baseline *models.FSRSParameter) (*kmemov1.OptimizeParametersRequest, error) {
 	request := &kmemov1.OptimizeParametersRequest{
-		RequestId:  requestID,
-		DatasetId:  datasetID,
+		RequestId:   requestID,
+		DatasetId:   datasetID,
 		KnowledgeId: knowledgeID,
-		ReviewLogs: ReviewLogsToOptimizerEntries(reviewLogs),
+		ReviewLogs:  reviewLogsToOptimizerEntries(reviewLogs),
 	}
 	if baseline != nil {
 		setting, err := SettingFromFSRSParameter(baseline)
@@ -132,6 +131,19 @@ func OptimizeParametersRequestFromModels(requestID, datasetID, knowledgeID strin
 	return request, nil
 }
 
+func effectiveCardID(explicit string, prior *models.CardSRS) string {
+	if explicit != "" {
+		return explicit
+	}
+	if prior != nil {
+		return prior.CardID
+	}
+	return ""
+}
+
+// --- Inbound: protobuf → models (responses) ---
+
+// CardStateToModel maps protobuf CardState into CardSRS for persistence.
 func CardStateToModel(cardID string, state *kmemov1.CardState) *models.CardSRS {
 	if state == nil {
 		return &models.CardSRS{CardID: cardID}
@@ -173,6 +185,7 @@ func CardStateToModel(cardID string, state *kmemov1.CardState) *models.CardSRS {
 	return model
 }
 
+// ReviewLogFromProto maps ReviewLogSnapshot into ReviewLog (SnapshotJSON defaults to "{}" if unset upstream).
 func ReviewLogFromProto(cardID string, log *kmemov1.ReviewLogSnapshot) *models.ReviewLog {
 	if log == nil {
 		return &models.ReviewLog{CardID: cardID}
@@ -195,7 +208,7 @@ func ReviewLogFromProto(cardID string, log *kmemov1.ReviewLogSnapshot) *models.R
 	return review
 }
 
-func ReviewLogsToProto(logs []*models.ReviewLog) []*kmemov1.ReviewLogSnapshot {
+func reviewLogsToProto(logs []*models.ReviewLog) []*kmemov1.ReviewLogSnapshot {
 	result := make([]*kmemov1.ReviewLogSnapshot, 0, len(logs))
 	for _, log := range logs {
 		if log == nil {
@@ -225,7 +238,7 @@ func ReviewLogsToProto(logs []*models.ReviewLog) []*kmemov1.ReviewLogSnapshot {
 	return result
 }
 
-func ReviewLogsToOptimizerEntries(logs []*models.ReviewLog) []*kmemov1.OptimizerReviewLogEntry {
+func reviewLogsToOptimizerEntries(logs []*models.ReviewLog) []*kmemov1.OptimizerReviewLogEntry {
 	result := make([]*kmemov1.OptimizerReviewLogEntry, 0, len(logs))
 	for _, log := range logs {
 		if log == nil {
@@ -246,6 +259,7 @@ func ReviewLogsToOptimizerEntries(logs []*models.ReviewLog) []*kmemov1.Optimizer
 	return result
 }
 
+// OptimizedSettingToModel maps an optimized SchedulerSetting into FSRSParameter for storage.
 func OptimizedSettingToModel(id, name string, setting *kmemov1.SchedulerSetting) (*models.FSRSParameter, error) {
 	if setting == nil {
 		return nil, fmt.Errorf("optimized setting is nil")

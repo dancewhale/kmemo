@@ -1,4 +1,4 @@
-package pyclient
+package grpcpython
 
 import (
 	"testing"
@@ -10,26 +10,26 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func TestReviewCardRequestFromModel(t *testing.T) {
+func TestReviewCardRequest(t *testing.T) {
 	now := time.Date(2026, 4, 2, 12, 0, 0, 0, time.UTC)
 	stability := 3.2
 	difficulty := 5.4
 	elapsedDays := 2.0
 	scheduledDays := 4.0
 	card := &models.CardSRS{
-		CardID:         "card-1",
-		FSRSState:      "review",
-		LastReviewAt:   ptrTime(now.Add(-48 * time.Hour)),
-		DueAt:          ptrTime(now.Add(24 * time.Hour)),
-		Stability:      &stability,
-		Difficulty:     &difficulty,
-		ElapsedDays:    &elapsedDays,
-		ScheduledDays:  &scheduledDays,
-		Reps:           5,
-		Lapses:         1,
+		CardID:        "card-1",
+		FSRSState:     "review",
+		LastReviewAt:  ptrTime(now.Add(-48 * time.Hour)),
+		DueAt:         ptrTime(now.Add(24 * time.Hour)),
+		Stability:     &stability,
+		Difficulty:    &difficulty,
+		ElapsedDays:   &elapsedDays,
+		ScheduledDays: &scheduledDays,
+		Reps:          5,
+		Lapses:        1,
 	}
 
-	request := ReviewCardRequestFromModel(card, 3, now)
+	request := ReviewCardRequest("card-1", card, 3, now)
 	if request.CardId != "card-1" {
 		t.Fatalf("card id = %q, want card-1", request.CardId)
 	}
@@ -41,9 +41,9 @@ func TestReviewCardRequestFromModel(t *testing.T) {
 	}
 }
 
-func TestRetrievabilityRequestFromModel(t *testing.T) {
+func TestRetrievabilityRequest(t *testing.T) {
 	now := time.Date(2026, 4, 2, 12, 0, 0, 0, time.UTC)
-	request := RetrievabilityRequestFromModel(&models.CardSRS{CardID: "card-1", FSRSState: "review"}, now)
+	request := RetrievabilityRequest("card-1", &models.CardSRS{CardID: "card-1", FSRSState: "review"}, now)
 	if request.GetCardId() != "card-1" {
 		t.Fatalf("card id = %q, want card-1", request.GetCardId())
 	}
@@ -98,4 +98,5 @@ func TestOptimizedSettingToModel(t *testing.T) {
 }
 
 func ptrTime(v time.Time) *time.Time { return &v }
+
 func ts(v time.Time) *timestamppb.Timestamp { return timestamppb.New(v.UTC()) }

@@ -6,9 +6,12 @@ import (
 
 	"go.uber.org/zap"
 
+	grpcpython "kmemo/internal/adapters/fsrs/grpc_python"
+	"kmemo/internal/adapters/fsrs/noop"
+	"kmemo/internal/adapters/grpcworker"
 	"kmemo/internal/app"
 	"kmemo/internal/config"
-	"kmemo/internal/pyclient"
+	"kmemo/internal/contracts/fsrs"
 	"kmemo/internal/zaplog"
 )
 
@@ -16,10 +19,11 @@ import (
 type Headless struct {
 	Config config.Config
 	Logger *zap.Logger
-	Py     *pyclient.Client
+	Worker *grpcworker.Client
+	FSRS   fsrs.FSRSScheduler
 }
 
-// NewHeadless wires config and the Python gRPC client. No SQLite / indexing yet.
+// NewHeadless wires config, optional Python gRPC worker, and FSRS scheduler port.
 func NewHeadless(ctx context.Context) (*Headless, error) {
 	cfg, err := config.Load()
 	if err != nil {
@@ -43,18 +47,20 @@ func NewHeadless(ctx context.Context) (*Headless, error) {
 		zap.Duration("db_slow_threshold", cfg.DBSlowThreshold),
 	)
 
-	var py *pyclient.Client
+	var worker *grpcworker.Client
+	var sched fsrs.FSRSScheduler = &noop.Scheduler{}
 	if !cfg.SkipPython {
-		py, err = pyclient.New(ctx, cfg)
+		worker, err = grpcworker.New(ctx, cfg)
 		if err != nil {
-			logger.Error("python client initialization failed", zap.Error(err))
+			logger.Error("grpc worker initialization failed", zap.Error(err))
 			_ = logger.Sync()
-			return nil, fmt.Errorf("pyclient: %w", err)
+			return nil, fmt.Errorf("grpc worker: %w", err)
 		}
+		sched = grpcpython.NewScheduler(worker.Processor())
 	} else {
-		logger.Warn("python client skipped")
+		logger.Warn("python grpc worker skipped")
 	}
-	return &Headless{Config: cfg, Logger: logger, Py: py}, nil
+	return &Headless{Config: cfg, Logger: logger, Worker: worker, FSRS: sched}, nil
 }
 
 // NewDesktop builds the object graph for Wails bindings.
@@ -63,5 +69,5 @@ func NewDesktop(ctx context.Context) (*app.Desktop, error) {
 	if err != nil {
 		return nil, err
 	}
-	return app.NewDesktop(h.Config, h.Logger, h.Py), nil
+	return app.NewDesktop(h.Config, h.Logger, h.Worker), nil
 }
