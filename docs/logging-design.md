@@ -69,7 +69,7 @@ UI API / Actions / Flows / Adapters / Repository
 推荐：
 
 ```text
-msg="submit review failed" card_id=123 action=submit_review capability=fsrs error="timeout"
+msg="submit review failed" card_id=123 action=submit_review capability=fsrs_scheduler error="timeout"
 ```
 
 不推荐：
@@ -215,10 +215,11 @@ level=ERROR msg="action failed" layer=action action=submit_review request_id=...
 
 #### Python gRPC
 
-- `capability=fsrs`
+- `capability=fsrs_scheduler`
+- `capability=fsrs_optimizer`
 - `capability=html_processor`
-- `capability=import_processor`
-- `adapter=pyclient`
+- `capability=source_process`
+- `adapter=grpcworker`
 - `target=127.0.0.1:50051`
 
 #### FileStore
@@ -236,7 +237,8 @@ level=ERROR msg="action failed" layer=action action=submit_review request_id=...
 ### 示例
 
 ```text
-level=INFO msg="contract call started" layer=adapter capability=fsrs adapter=pyclient op=calculate request_id=...
+level=INFO msg="contract call started" layer=adapter capability=fsrs_scheduler adapter=grpcworker op=set_scheduler request_id=...
+level=INFO msg="contract call started" layer=adapter capability=fsrs_scheduler adapter=grpcworker op=calculate request_id=...
 level=ERROR msg="contract call failed" layer=adapter capability=file_store adapter=local_fs op=save path="cards/1/content.html" error="permission denied"
 ```
 
@@ -315,8 +317,8 @@ repository 不是业务主流程展示层。
 
 ```text
 level=INFO msg="bootstrap config loaded" layer=bootstrap python_grpc="127.0.0.1:50051" skip_python=false
-level=INFO msg="python client connected" layer=bootstrap component=pyclient target="127.0.0.1:50051"
-level=WARN msg="python client skipped" layer=bootstrap component=pyclient reason="KMEMO_SKIP_PYTHON=1"
+level=INFO msg="python grpc connected" layer=bootstrap component=grpcworker target="127.0.0.1:50051"
+level=WARN msg="python grpc skipped" layer=bootstrap component=grpcworker reason="KMEMO_SKIP_PYTHON=1"
 ```
 
 ---
@@ -744,7 +746,7 @@ data/logs/
 - gRPC metadata 透传 request_id
 - 慢操作 WARN
 - 本地日志文件轮转
-- SearchIndexer / FileStore / ImportProcessor 的详细边界日志
+- SearchIndexer / FileStore / SourceProcessClient / FSRSClient 的详细边界日志
 
 ---
 

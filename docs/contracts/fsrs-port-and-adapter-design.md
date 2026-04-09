@@ -33,22 +33,26 @@
 ```text
 internal/contracts/fsrs/
 ├── doc.go              # 包说明：本包为 FSRS 端口，禁止在上层使用 proto
-├── scheduler.go        # FSRSScheduler（或 FSRSClient）接口定义
-└── types.go            # （可选）端口专用输入 DTO，避免 models 过重时再抽
+├── client.go           # FSRSClient 接口定义
+└── types.go            # 端口专用输入输出 DTO
+
+internal/adapters/grpcworker/
+└── conn.go             # 共享 gRPC 连接，仅负责 Dial / 生命周期管理
 
 internal/adapters/fsrs/
-├── grpc_python/        # 默认实现：通过现有 KmemoProcessor gRPC 调 Python
-│   ├── client.go       # 实现 contracts/fsrs.FSRSScheduler；持有 *grpc.ClientConn 或裸 KmemoProcessorClient
-│   ├── dial.go         # 从 config 拨号（可由 pyclient.New 逻辑迁入）
-│   └── conv.go         # *kmemov1.* ↔ *models.* 双向映射（由 pyclient/fsrs.go 迁入并改名整理）
-├── noop/               # （可选）测试用空实现
-└── inmemory/           # （可选）未来 Go 原生 FSRS 算法时的本地实现
+├── grpc_python/
+│   ├── scheduler_client.go   # 对接 FsrsSchedulerService
+│   ├── optimizer_client.go   # 对接 FsrsOptimizerService（若 Go 侧启用）
+│   └── conv.go               # proto ↔ contracts/fsrs DTO 映射
+├── noop/
+└── inmemory/
 ```
 
 说明：
 
-- **`contracts/fsrs` 只放接口 +（可选）纯 Go DTO**，**不推荐**在接口方法里出现 `*kmemov1.*`。
-- **`adapters/fsrs/grpc_python/conv.go`** 承接当前 `internal/pyclient/fsrs.go` 中的映射函数，并按「入站/出站」分块注释，便于单测。
+- `contracts/fsrs` 只放接口 + 纯 Go DTO，不在接口方法里出现 `*kmemov1.*`。
+- `grpcworker` 只负责共享连接；FSRS 主路径通过专门的 `FsrsSchedulerService` / `FsrsOptimizerService` 适配器访问。
+- `adapters/fsrs/grpc_python/conv.go` 负责 proto ↔ Go DTO 映射，避免上层复制 transport 细节。
 
 ---
 
@@ -57,31 +61,41 @@ internal/adapters/fsrs/
 ### 4.1 核心接口（建议命名）
 
 ```go
-// FSRSScheduler 描述「调度/复习/可检索度/改期/参数优化」等对外能力。
-// 所有方法入参、出参均为应用侧类型，不暴露 protobuf。
-type FSRSScheduler interface {
-    // Review 根据当前 SRS 快照与评分，计算新的 SRS 状态与一条待持久化的 ReviewLog（不含主键时可由上层生成 ID）。
-    Review(ctx context.Context, in ReviewInput) (*ReviewOutput, error)
-
-    GetRetrievability(ctx context.Context, in RetrievabilityInput) (*RetrievabilityOutput, error)
-
-    Reschedule(ctx context.Context, in RescheduleInput) (*RescheduleOutput, error)
-
-    // SetGlobalSetting 将 FSRS 参数推送到远端（若远端无状态可变为 no-op）。
-    SetGlobalSetting(ctx context.Context, param *models.FSRSParameter) error
-
-    OptimizeParameters(ctx context.Context, in OptimizeParametersInput) (*models.FSRSParameter, error)
+// FSRSClient 描述当前 Go 主路径使用的两类基础能力：
+// 1) 先将当前 preset/setting 下发给远端 scheduler；
+// 2) 再执行单卡 review 计算。
+type FSRSClient interface {
+    SetScheduler(ctx context.Context, in SetSchedulerInput) error
+    Calculate(ctx context.Context, in ReviewInput) (*ReviewOutput, error)
 }
 ```
 
+说明：
+
+- 当前 Go contracts 主路径与 `docs/python/fsrs-module-design.md` 对齐，优先保留 `SetScheduler(...)` + `Calculate(...)` 两类基础能力。
+- Python transport 侧可以更细地实现 `SettingScheduler`、`GetCardRetrievability`、`ReviewCard`、`RescheduleCard`、`OptimizeParameters`，但不要求 Go contract 第一版一次性全部暴露。
+- 若后续 Go 明确需要 retrievability / reschedule / optimize，再在不破坏主路径的前提下增补能力接口。
+
 ### 4.2 输入输出类型（建议）
 
-用 **显式 Input/Output 结构体** 代替长参数列表，便于演进（与 gRPC 字段解耦）：
+建议使用显式 Input/Output 结构体，与 Python typed RPC 的核心语义保持同构：
 
-- `ReviewInput`：`CardID`、`Prior *models.CardSRS`（nil 表示 new）、`Rating int`、`ReviewedAt time.Time`
-- `ReviewOutput`：`Next *models.CardSRS`、`Log *models.ReviewLog`、`Retrievability float64`（若 Python 返回）、`Warnings []string`（若有）
+- `SetSchedulerInput`：`Parameters []float64`、`DesiredRetention *float64`、`MaximumInterval *int`
+- `ReviewInput`：`CardID`、`State`、`Stability`、`Difficulty`、`Due`、`LastReview`、`ElapsedDays`、`ScheduledDays`、`Reps`、`Lapses`、`Rating`、`ReviewedAt`
+- `ReviewOutput`：
+  - `Card`：`State`、`Stability`、`Difficulty`、`Due`
+  - `ReviewLog`：`Rating`、`Review`、`ElapsedDays`、`ScheduledDays`
+  - `Retrievability *float64`
+  - `Warnings []string`
 
-这样 **actions 层** 代码形如：`out, err := scheduler.Review(ctx, in)`，**无需知道** `ReviewCardResponse` 的存在。
+这样 actions 层代码可以清晰表达为：
+
+```go
+if err := client.SetScheduler(ctx, setting); err != nil { ... }
+out, err := client.Calculate(ctx, reviewReq)
+```
+
+而不用在上层暴露 `SettingSchedulerRequest` / `ReviewCardResponse` 等 proto 细节。
 
 ### 4.3 与现有 models 的关系
 
@@ -94,18 +108,23 @@ type FSRSScheduler interface {
 
 ### 5.1 `grpc_python` 实现
 
-1. 调用 `kmemov1.KmemoProcessorClient` 的 `ReviewCard`、`GetCardRetrievability`、`RescheduleCard`、`SchedulerSetSetting`、`OptimizeParameters` 等。
+1. 通过共享 `grpcworker` 连接调用 `FsrsSchedulerService` 的 `SettingScheduler`、`ReviewCard`，以及 `FsrsOptimizerService` 的 `OptimizeParameters`（若 Go 侧启用）。
 2. **在 adapter 内**完成：
-   - 请求：`models` / Input DTO → `*kmemov1.*Request`（逻辑从现 `pyclient/fsrs.go` 迁入）。
-   - 响应：`*kmemov1.*Response` → `ReviewOutput` 等（**此处完成你要求的「gRPC → GORM 模型」**）。
+   - 请求：contracts/fsrs DTO → `*kmemov1.*Request`
+   - 响应：`*kmemov1.*Response` → contracts/fsrs DTO
 3. 错误处理：
-   - gRPC `status` → 包装为带 `Unwrap` 的 `error`，必要时定义 `contracts/fsrs` 或 `actions/errs` 可识别的哨兵错误（如 `ErrUnavailable`、`ErrInvalidArgument`）。
+   - gRPC `status` → 包装为带 `Unwrap` 的 `error`，必要时定义可识别的哨兵错误（如 `ErrUnavailable`、`ErrInvalidArgument`）。
+
+补充：
+
+- 旧 `CalculateFsrs(item_id, payload_json)` 不再作为适配目标。
+- `KmemoProcessor` 不再承载 FSRS 主路径；若仓库中仍保留该 service，也仅处理与 FSRS 无关的其他能力。
 
 ### 5.2 转换代码放置（与「contracts 负责转换」的对应关系）
 
 | 方案 | 转换代码位置 | contracts 是否 import proto | 说明 |
 |------|----------------|----------------------------|------|
-| **A（推荐）** | `internal/adapters/fsrs/grpc_python/conv.go` | 否 | 端口只声明「返回 models」；**语义上**由 FSRS 适配器模块负责「把 gRPC 变成 models」，与开源习惯一致 |
+| **A（推荐）** | `internal/adapters/fsrs/grpc_python/conv.go` | 否 | 端口只声明 Go DTO；由 FSRS adapter 负责把 typed gRPC 映射成上层可用结构，与最新 Python FSRS 设计保持一致 |
 
 
 ---
@@ -116,32 +135,31 @@ type FSRSScheduler interface {
 
 | 现状文件 | 内容 | 迁移去向 |
 |----------|------|----------|
-| `client.go` | gRPC 连接、`KmemoProcessorClient` 封装、FSRS 相关 RPC 透传 | **连接**：放在 `adapters/fsrs` |
-| `fsrs.go` | `models` ↔ proto | **`adapters/fsrs/conv.go`**|
-| `fsrs_test.go` | 映射单测 | 随 conv 迁移，测试表驱动覆盖边界（nil、缺字段） |
+| `client.go` | 历史上的 raw generated client / 连接封装 | **连接**：下沉到 `internal/adapters/grpcworker` |
+| `fsrs.go` | FSRS proto ↔ Go DTO 映射 | **`internal/adapters/fsrs/grpc_python/conv.go`** |
+| `fsrs_test.go` | 映射单测 | 随 conv 迁移，测试表驱动覆盖边界 |
 
-### 6.2 直接废弃 `pyclient` 包
+### 6.2 废弃策略
 
-可直接将 `internal/pyclient` **标记 deprecated** 并删除：
+- FSRS 相关代码不再继续挂在 `internal/pyclient` 名下。
+- 多领域共享连接时，仅保留一个极薄的 `grpcworker` 连接层；不要再保留语义含糊的 `pyclient` 大包。
+- 若现有实现已经完成迁移，相关设计文档应以 `grpcworker + adapters/fsrs` 为准，而不是继续把 `pyclient` 当作长期结构。
 ---
 
 ## 7. 上层调用约定（actions / repository）
 
-- **actions**：只依赖 `FSRSScheduler.Review` 等；复习写库仍用 `repository.SRSRepository.UpdateAfterReview`（或等价事务接口）。
-- **禁止**：actions 直接 `ReviewCard(ctx, *kmemov1.ReviewCardRequest)`。
-- **ReviewLog 主键**：可在 **adapter 返回后**由 actions 统一 `uuid.NewV7()`，与当前实现一致；或在 Output 中约定「若 Log.ID 为空则上层填」。
+- **actions**：只依赖 `FSRSClient.SetScheduler(...)` 与 `FSRSClient.Calculate(...)`；复习写库仍用 `repository.SRSRepository.UpdateAfterReview`（或等价事务接口）。
+- **典型调用顺序**：先从 `FSRSParameter` 组装 scheduler setting，下发 `SetScheduler(...)`，再调用 `Calculate(...)` 执行单卡 review 计算。
+- **禁止**：actions 直接依赖 `*kmemov1.*` request/response 或调用旧 `CalculateFsrs(payload_json)`。
+- **ReviewLog 主键**：若 Python 响应仅返回 review 结果字段，可由 Go 在持久化前补齐主键；adapter 不负责决定持久化主键策略。
 
 ---
 
-## 8. 待你确认（影响目录与是否保留 pyclient）
+## 8. 与其他 Python 能力的关系
 
-1. **Python worker 除 FSRS 外**，是否还有 **CleanHtml、PrepareImportMaterial** 等仍要走同一 `KmemoProcessor` 连接？  
-   - 是的：建议单独增加 `contracts/html`、`contracts/import` 等端口，并抽 **`internal/adapters/grpcworker`** 只负责 **Dial + 共享 Conn**，`adapters/fsrs` 注入其中的 `KmemoProcessorClient` 或子接口，**避免**为每个领域各拨一次号。  
-
-2. **转换代码**你更希望落在 **A（adapter 内 conv）** 还是 **B（contracts/fsrs/conv 依赖 proto）**？  
-   -  `A`
-
-3. **接口命名**：更偏好 `FSRSScheduler`、`FSRSClient`.
+- 若 Python worker 同时承载 HTML、source-process 等能力，建议通过 **`internal/adapters/grpcworker`** 共享连接。
+- 连接复用不等于 service 合并：FSRS 仍应使用专门的 `FsrsSchedulerService` / `FsrsOptimizerService`。
+- 因此，文档中的长期结构应是“共享连接层 + 按领域拆 adapter/service”，而不是“单一 `KmemoProcessor` + 单一 `pyclient`”。
 
 ---
 
@@ -149,13 +167,14 @@ type FSRSScheduler interface {
 
 - **conv 单测**：不启动 Python，仅 proto ↔ model 表驱动测试（迁移 `fsrs_test.go`）。
 - **集成测试**：可选 `task run:python` + 真实 gRPC（标 `integration` build tag）。
-- **替换实现**：未来增加 `adapters/fsrs/native_go`，实现同一 `FSRSScheduler`，actions **零改**。
+- **替换实现**：未来增加 `adapters/fsrs/native_go`，实现同一 `FSRSClient`，actions **零改**。
 
 ---
 
 ## 10. 小结
 
-- **端口**在 `internal/contracts/fsrs`：**方法签名只使用 models / 端口 DTO**，保证上层可读、可测。
-- **gRPC → GORM 模型**的转换在工程上由 **`internal/adapters/fsrs`实现**；。
-- **`pyclient`**：FSRS 映射与调用迁入 **`adapters/fsrs`** 后，包级 **可废弃**；若多领域共享连接，保留 **极薄的 grpcworker**，而不是保留名为 `pyclient` 的模糊大包。
+- **端口**在 `internal/contracts/fsrs`：当前 Go 主路径优先保留 `SetScheduler(...)` + `Calculate(...)` 两类基础能力。
+- **Python service**：FSRS 主路径由专用 `FsrsSchedulerService` / `FsrsOptimizerService` 承担；旧 `CalculateFsrs` 与 `KmemoProcessor` 中的 FSRS 入口均应退出主设计。
+- **映射职责**：proto ↔ Go DTO 的转换仍由 `internal/adapters/fsrs/grpc_python/conv.go` 承担。
+- **连接层**：多领域共享连接时保留极薄的 `grpcworker`，不要继续以 `pyclient` 作为长期结构名称。
 

@@ -336,13 +336,15 @@ type CardContentStore interface {
 
 ### 适用场景
 
-- 提交复习时计算新调度结果
-- 未来支持不同参数预设
+- 提交复习前先下发当前生效的 scheduler setting
+- 提交复习时计算单卡新的调度结果
+- 后续若需要 retrievability / reschedule / optimize，可在不破坏主路径的前提下继续扩展
 
 ### 建议接口
 
 ```go
 type FSRSClient interface {
+    SetScheduler(ctx context.Context, req SetSchedulerRequest) error
     Calculate(ctx context.Context, req FSRSRequest) (*FSRSResult, error)
 }
 ```
@@ -350,35 +352,52 @@ type FSRSClient interface {
 ### 建议数据结构
 
 ```go
+type SetSchedulerRequest struct {
+    Parameters       []float64
+    DesiredRetention *float64
+    MaximumInterval  *int
+}
+
 type FSRSRequest struct {
-    CardID            string
-    Rating            int
-    ReviewedAtUnix    int64
-    FSRSState         string
-    Stability         *float64
-    Difficulty        *float64
-    Reps              int
-    Lapses            int
-    DesiredRetention  *float64
-    MaximumInterval   *int
-    ParametersJSON    *string
+    CardID       string
+    State        string
+    Stability    *float64
+    Difficulty   *float64
+    Due          *time.Time
+    LastReview   *time.Time
+    ElapsedDays  *float64
+    ScheduledDays *float64
+    Reps         int
+    Lapses       int
+    Rating       int
+    ReviewedAt   time.Time
 }
 
 type FSRSResult struct {
-    FSRSState      string
-    DueAtUnix      int64
-    Stability      *float64
-    Difficulty     *float64
-    ElapsedDays    *float64
-    ScheduledDays  *float64
+    Card struct {
+        State      string
+        Stability  *float64
+        Difficulty *float64
+        Due        *time.Time
+    }
+    ReviewLog struct {
+        Rating        int
+        Review        time.Time
+        ElapsedDays   *float64
+        ScheduledDays *float64
+    }
+    Retrievability *float64
+    Warnings       []string
 }
 ```
 
 ### 设计要点
 
-- 这里不直接暴露 proto 的 `payload_json`
-- actions 可以从 repository 取出现有 SRS 状态和参数，再组装成 `FSRSRequest`
-- adapter 内部再决定如何映射到 Python gRPC 请求
+- Go contracts 当前主路径保留两类基础能力：`SetScheduler(...)` 与 `Calculate(...)`。
+- `SetScheduler(...)` 对应 Python 侧 `SettingScheduler`；`Calculate(...)` 对应 Python 侧 `ReviewCard`。
+- `FSRSRequest` / `FSRSResult` 的字段命名应向 Python typed 结果收敛，避免继续使用 `due_at_unix`、`next_fsrs_state` 之类的过渡命名。
+- adapter 的职责是协议转换，不是重新设计领域模型；若 Python 返回 `card` / `review_log` 结构，Go 侧也应优先保持同构。
+- 旧 `CalculateFsrs(item_id, payload_json)` 仅作为历史残留提及，不再作为 contract 设计基础。
 
 ---
 
@@ -564,6 +583,7 @@ SubmitReviewAction
   -> repository.Card.GetByID
   -> repository.SRS.GetByCardID
   -> repository.FSRSParameter.GetDefault
+  -> contracts.FSRSClient.SetScheduler
   -> contracts.FSRSClient.Calculate
   -> repository.SRS.UpdateAfterReview
   -> repository.ReviewLog.Create
