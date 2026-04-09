@@ -242,17 +242,25 @@ type SearchIndexer interface {
 }
 
 type HTMLProcessor interface {
-    Clean(ctx context.Context, html string) (CleanResult, error)
+    Clean(ctx context.Context, req CleanHTMLRequest) (*CleanHTMLResult, error)
 }
 
 type FileStore interface {
-    SaveHTML(ctx context.Context, path string, content []byte) error
-    ReadHTML(ctx context.Context, path string) ([]byte, error)
+    Save(ctx context.Context, path string, content []byte) error
+    Read(ctx context.Context, path string) ([]byte, error)
     Delete(ctx context.Context, path string) error
 }
 
 type FSRSClient interface {
-    Calculate(ctx context.Context, req FSRSRequest) (FSRSResult, error)
+    Calculate(ctx context.Context, req FSRSRequest) (*FSRSResult, error)
+}
+
+type SourceProcessClient interface {
+    SubmitImportJob(ctx context.Context, req SubmitImportJobRequest) (*SubmitImportJobResult, error)
+    GetJob(ctx context.Context, jobID string) (*SourceProcessJob, error)
+    ListJobEvents(ctx context.Context, jobID string) ([]SourceProcessJobEvent, error)
+    CancelJob(ctx context.Context, jobID string) error
+    GetCapabilities(ctx context.Context) (*SourceProcessCapabilities, error)
 }
 ```
 
@@ -267,7 +275,9 @@ internal/adapters/
 ├── bleve/
 ├── filestore/
 ├── htmlproc/
-├── pyclient/
+├── grpcworker/
+├── fsrs/
+├── sourceprocess/
 └── clock/
 ```
 
@@ -364,13 +374,16 @@ internal/
 │   ├── html.go
 │   ├── filestore.go
 │   ├── fsrs.go
+│   ├── source_process.go
 │   └── clock.go
 │
 ├── adapters/                   # contracts 的具体适配实现
 │   ├── bleve/
 │   ├── filestore/
 │   ├── htmlproc/
-│   ├── pyclient/
+│   ├── grpcworker/
+│   ├── fsrs/
+│   ├── sourceprocess/
 │   └── clock/
 │
 ├── storage/
@@ -430,7 +443,7 @@ Bleve 是搜索基础设施，不是数据库本体。
 
 - 抽象接口：`internal/contracts/html.go`
 - Go 实现：`internal/adapters/htmlproc/`
-- Python 调用实现：`internal/adapters/pyclient/`
+- Python 调用实现：`internal/adapters/htmlproc/` 或通过共享 `grpcworker` 连接的远端适配器
 
 ### 设计建议
 
@@ -438,7 +451,7 @@ Bleve 是搜索基础设施，不是数据库本体。
 
 ```go
 type HTMLProcessor interface {
-    Clean(ctx context.Context, html string) (CleanResult, error)
+    Clean(ctx context.Context, req CleanHTMLRequest) (*CleanHTMLResult, error)
 }
 ```
 
@@ -450,8 +463,9 @@ type HTMLProcessor interface {
 
 ### 原则
 
-HTML 的业务规则可以由 actions/flows 决定，
-但 HTML 的技术处理能力应收敛到 `HTMLProcessor` 接口后面。
+`CleanHtml` 继续视为通用 `HTMLProcessor` 的同步轻量能力。
+Python 端即便由 source-process 相关服务实现，也不改变上层 contract 仍是 `HTMLProcessor` 这一事实。
+HTML 的业务规则可以由 actions/flows 决定，但 HTML 的技术处理能力应收敛到 `HTMLProcessor` 接口后面。
 
 ---
 
@@ -464,8 +478,14 @@ HTML 的业务规则可以由 actions/flows 决定，
 
 ### 原因
 
-HTML、图片、原始导入文件、附件，都属于“文件资产”。
-它们不是简单数据库字段，不应该散落在 card service、repository、Wails API 中。
+正式业务资产（卡片 HTML、长期保留的来源文件、最终资产文件）应统一经 `FileStore` 管理；
+但 source-process job 的 `workspace_dir / output_dir / temp_dir` 属于流程工作目录，不等同于正式 `FileStore`。
+建议边界如下：
+
+- job workspace：供导入流程中间产物和标准输出目录使用
+- FileStore：仅承接最终需要长期保留并被业务对象引用的文件
+
+这样可避免把临时流程目录误建模成正式业务存储。
 
 ### 建议能力
 
@@ -505,8 +525,8 @@ data/
 
 ### 建议放置
 
-- 接口：`internal/contracts/fsrs.go`、`internal/contracts/html.go`
-- 实现：`internal/adapters/pyclient/`
+- 接口：`internal/contracts/fsrs.go`、`internal/contracts/html.go`、`internal/contracts/source_process.go`
+- 实现：`internal/adapters/grpcworker/` + 领域适配器（如 `internal/adapters/fsrs/`、`internal/adapters/sourceprocess/`）
 
 ### 建议拆分
 
@@ -514,9 +534,9 @@ data/
 
 - `FSRSClient`
 - `HTMLProcessor`
-- 未来可加 `ImportProcessor`
+- `SourceProcessClient`
 
-这样后续如果某项能力改为 Go 原生实现，只替换对应 port 的 adapters 实现即可。
+连接层可通过共享 `grpcworker` 复用同一条 gRPC 连接，但 proto service 与 adapter 应按领域拆分，而不是继续保留历史上的单一 Python 网关大包。
 
 ---
 
@@ -715,7 +735,7 @@ Wails UI
 
 - Wails 方法里
 - repository 里
-- pyclient 里
+- gRPC 领域适配器里
 
 而是集中在一个明确的 actions / flows 中。
 

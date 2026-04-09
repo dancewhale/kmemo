@@ -66,7 +66,7 @@ Actions / Flows
 2. HTML 处理
 3. 文件存储
 4. FSRS 调度计算
-5. 导入预处理
+5. source-process 导入任务编排
 6. 时钟/时间来源
 7. 可选：任务调度、事件发布（未来）
 
@@ -127,7 +127,7 @@ type PythonClient interface {
 
 - `FSRSClient`
 - `HTMLProcessor`
-- `ImportProcessor`
+- `SourceProcessClient`
 - `SearchIndexer`
 - `FileStore`
 - `Clock`
@@ -172,7 +172,7 @@ internal/contracts/
 ├── html.go
 ├── filestore.go
 ├── fsrs.go
-├── importing.go
+├── source_process.go
 └── clock.go
 ```
 
@@ -186,7 +186,7 @@ internal/contracts/
 ├── html/
 ├── filestore/
 ├── fsrs/
-├── importing/
+├── source_process/
 └── clock/
 ```
 
@@ -382,51 +382,102 @@ type FSRSResult struct {
 
 ---
 
-## 6.5 ImportProcessor
+## 6.5 SourceProcessClient
 
 ### 适用场景
 
-- PDF/EPUB/HTML/TEXT 导入前预处理
-- 把原始字节转成可进一步拆分的标准化材料
+- 提交 HTML/EPUB/PDF 等来源导入任务
+- 跟踪 Python worker 的异步处理状态与事件
+- 查询 converter / cleaner / mode 等能力发现信息
 
 ### 建议接口
 
 ```go
-type ImportProcessor interface {
-    Prepare(ctx context.Context, req PrepareImportRequest) (*PrepareImportResult, error)
+type SourceProcessClient interface {
+    SubmitImportJob(ctx context.Context, req SubmitImportJobRequest) (*SubmitImportJobResult, error)
+    GetJob(ctx context.Context, jobID string) (*SourceProcessJob, error)
+    ListJobEvents(ctx context.Context, jobID string) ([]SourceProcessJobEvent, error)
+    CancelJob(ctx context.Context, jobID string) error
+    GetCapabilities(ctx context.Context) (*SourceProcessCapabilities, error)
 }
 ```
 
-### 建议数据结构
+### 设计说明
+
+- `SourceProcessClient` 是 source-process 领域的**任务式 transport contract**，承接 Python worker 的异步导入能力。
+- 为了保持 action 侧语义清晰，可以在更高层保留一个面向业务的导入 flow/Action 封装，但 contracts 主边界应以异步 job 为准，而不是旧的同步 `PrepareImportMaterial`。
+- `CleanHtml` 不并入该接口，继续作为通用 `HTMLProcessor` 的同步能力。
+
+### 建议数据结构（最小集合）
 
 ```go
-type PrepareImportRequest struct {
-    ImportJobID string
-    FormatHint  string
-    RawBytes    []byte
+type SubmitImportJobRequest struct {
+    JobID         string
+    SourceType    string
+    SourcePath    *string
+    SourceURI     *string
+    SourceURL     *string
+    RawHTML       *string
+    WorkspaceDir  string
+    OutputDir     string
+    TempDir       string
+    Options       SourceProcessOptions
+    Metadata      map[string]string
+    IdempotencyKey *string
 }
 
-type PrepareImportResult struct {
-    Title        string
-    Author       string
-    HTML         string
-    PlainText    string
-    MetadataJSON string
+type SubmitImportJobResult struct {
+    JobID   string
+    Status  string
+    Accepted bool
+}
+
+type SourceProcessJob struct {
+    JobID      string
+    Status     string
+    Stage      string
+    Progress   float32
+    ResultPath *string
+    ErrorCode  *string
+    ErrorMessage *string
+}
+
+type SourceProcessJobEvent struct {
+    JobID      string
+    Sequence   int64
+    Stage      string
+    Message    string
+    CreatedAtUnix int64
+}
+
+type SourceProcessCapabilities struct {
+    SourceTypes      []string
+    ConversionModes  []string
+    ConverterNames   []string
+    CleanerNames     []string
+}
+
+type SourceProcessOptions struct {
+    ConversionMode        string
+    FallbackModes         []string
+    ExtractMainContent    bool
+    SanitizeHTML          bool
+    PreserveSemanticTags  bool
+    DownloadRemoteAssets  bool
+    InlineSmallImages     bool
+    GenerateTOC           bool
+    AnalyzeStructure      bool
+    KeepSourceCopy        bool
+    EnabledCleaners       []string
+    ConverterParamsJSON   *string
 }
 ```
 
 ### 设计要点
 
-- 当前 proto 里是 `prepared_json`，但 contracts 层可以先定义更稳定的语义结果
-- 如果第一阶段不想定太细，也可以先保守定义为：
-
-```go
-type PrepareImportResult struct {
-    PreparedJSON []byte
-}
-```
-
-但从长期可读性看，更推荐尽早语义化。
+- 大文件主路径通过 `source_path/source_uri/workspace_dir/output_dir/temp_dir` 传递，不通过 gRPC 直接传大字节。
+- Python 输出的是**标准输出目录 + manifest**；Go 在任务成功后读取结果并决定如何创建 `SourceDocument`、`Article`、`Card`、`Asset`。
+- Go 是导入 job 状态的持久化真相源；Python 负责执行与事件上报。
 
 ---
 
@@ -523,10 +574,12 @@ SubmitReviewAction
 ```text
 ImportDocumentFlow
   -> repository.Knowledge.GetByID
-  -> contracts.ImportProcessor.Prepare
-  -> contracts.HTMLProcessor.Clean   # 可选，看流程拆法
-  -> contracts.FileStore.Save
+  -> contracts.SourceProcessClient.SubmitImportJob
+  -> repository.ImportJob.Create / UpdateStatus
+  -> contracts.SourceProcessClient.GetJob / ListJobEvents
+  -> 读取 manifest 与标准输出目录
   -> repository.SourceDocument.Create
+  -> repository.Article.Create
   -> repository.Card.Create
   -> contracts.SearchIndexer.IndexCard
 ```
@@ -539,12 +592,15 @@ ImportDocumentFlow
 
 ```text
 contracts.HTMLProcessor
-  ├── adapters/htmlproc/cleaner.go         # Go 本地实现
-  └── adapters/pyclient/html_processor.go  # Python gRPC 实现
+  ├── adapters/htmlproc/cleaner.go
+  └── adapters/sourceprocess/html_processor.go  # 通过共享 grpcworker 的远端实现
 
 contracts.FSRSClient
-  ├── adapters/pyclient/fsrs_client.go
+  ├── adapters/fsrs/grpc_python/client.go
   └── adapters/fsrs/local.go               # 未来可选
+
+contracts.SourceProcessClient
+  └── adapters/sourceprocess/client.go
 
 contracts.SearchIndexer
   ├── adapters/bleve/indexer.go
@@ -592,12 +648,12 @@ type CreateCardAction struct {
 
 ```go
 type ExternalContracts struct {
-    HTMLProcessor contracts.HTMLProcessor
-    FileStore     contracts.FileStore
-    SearchIndexer contracts.SearchIndexer
-    FSRSClient    contracts.FSRSClient
-    Importer      contracts.ImportProcessor
-    Clock         contracts.Clock
+    HTMLProcessor     contracts.HTMLProcessor
+    FileStore         contracts.FileStore
+    SearchIndexer     contracts.SearchIndexer
+    FSRSClient        contracts.FSRSClient
+    SourceProcess     contracts.SourceProcessClient
+    Clock             contracts.Clock
 }
 ```
 
@@ -607,19 +663,18 @@ type ExternalContracts struct {
 
 ## 11. 当前阶段最小可落地方案
 
-如果按当前仓库状态推进，建议第一批先落这 5 个 contract：
+如果按当前仓库状态推进，建议第一批先落这 6 个 contract：
 
 1. `HTMLProcessor`
 2. `FileStore`
 3. `FSRSClient`
-4. `ImportProcessor`
+4. `SourceProcessClient`
 5. `Clock`
-
-`SearchIndexer` 可以一起设计，但实现可稍后接入，因为当前仓库还没有 Bleve 代码。
+6. `SearchIndexer`（接口先行，实现可后置）
 
 ### 推荐原因
 
-- `FSRSClient`、`HTMLProcessor`、`ImportProcessor` 已经能直接对应现有 proto 能力
+- `FSRSClient`、`HTMLProcessor` 与 `SourceProcessClient` 能直接对应当前 Python 侧能力拆分
 - `Clock` 很轻，但对测试和后续规则实现很有帮助
 - `FileStore` 会很快在卡片 HTML 与资源落盘中变成刚需
 - `SearchIndexer` 先定义边界，后接 Bleve 时不会再反向侵入 action
@@ -634,7 +689,7 @@ type ExternalContracts struct {
 - `html.go`
 - `filestore.go`
 - `fsrs.go`
-- `importing.go`
+- `source_process.go`
 - `clock.go`
 - `errors.go`
 
@@ -644,7 +699,7 @@ type ExternalContracts struct {
 - `HTMLProcessor`
 - `FileStore`
 - `FSRSClient`
-- `ImportProcessor`
+- `SourceProcessClient`
 - `Clock`
 
 ### 结果结构名
@@ -656,8 +711,7 @@ type ExternalContracts struct {
 - `CleanHTMLResult`
 - `FSRSRequest`
 - `FSRSResult`
-- `PrepareImportRequest`
-- `PrepareImportResult`
+- `SourceProcessCapabilities`
 
 ---
 
