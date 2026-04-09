@@ -68,11 +68,39 @@ class KmemoProcessor(kmemo_pb2_grpc.KmemoProcessorServicer):
             lambda: html_service.clean_html(request),
         )
 
-    def PrepareImportMaterial(self, request, context):
+    def SubmitImportJob(self, request, context):
         return with_rpc_logging(
             context,
-            "PrepareImportMaterial",
-            lambda: import_service.prepare_import(request),
+            "SubmitImportJob",
+            lambda: import_service.submit_import_job(request),
+        )
+
+    def GetJob(self, request, context):
+        return with_rpc_logging(
+            context,
+            "GetJob",
+            lambda: import_service.get_job(request),
+        )
+
+    def ListJobEvents(self, request, context):
+        return with_rpc_logging(
+            context,
+            "ListJobEvents",
+            lambda: import_service.list_job_events(request),
+        )
+
+    def CancelJob(self, request, context):
+        return with_rpc_logging(
+            context,
+            "CancelJob",
+            lambda: import_service.cancel_job(request),
+        )
+
+    def GetCapabilities(self, request, context):
+        return with_rpc_logging(
+            context,
+            "GetCapabilities",
+            lambda: import_service.get_capabilities(request),
         )
 
 

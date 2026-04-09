@@ -26,8 +26,8 @@ func main() {
 		return
 	}
 	defer func() {
-		if h.Py != nil {
-			_ = h.Py.Close()
+		if h.Worker != nil {
+			_ = h.Worker.Close()
 		}
 		_ = h.Logger.Sync()
 	}()

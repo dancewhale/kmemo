@@ -15,7 +15,11 @@ service KmemoProcessor {
   rpc RescheduleCard(RescheduleCardRequest) returns (RescheduleCardResponse);
   rpc OptimizeParameters(OptimizeParametersRequest) returns (OptimizeParametersResponse);
   rpc CleanHtml(CleanHtmlRequest) returns (CleanHtmlResponse);
-  rpc PrepareImportMaterial(PrepareImportMaterialRequest) returns (PrepareImportMaterialResponse);
+  rpc SubmitImportJob(SubmitImportJobRequest) returns (SubmitImportJobResponse);
+  rpc GetJob(GetJobRequest) returns (GetJobResponse);
+  rpc ListJobEvents(ListJobEventsRequest) returns (ListJobEventsResponse);
+  rpc CancelJob(CancelJobRequest) returns (CancelJobResponse);
+  rpc GetCapabilities(GetCapabilitiesRequest) returns (GetCapabilitiesResponse);
 }
 
 // --- FSRS Scheduler ---
@@ -164,17 +168,122 @@ message CleanHtmlResponse {
   string cleaned_html = 3;
 }
 
-// --- PrepareImportMaterial ---
+// --- Source Process ---
 
-message PrepareImportMaterialRequest {
-  string import_job_id = 1;
-  string format_hint = 2;
-  bytes raw_bytes = 3;
+message ImportOptions {
+  string conversion_mode = 1;
+  repeated string fallback_modes = 2;
+  bool extract_main_content = 3;
+  bool sanitize_html = 4;
+  bool preserve_semantic_tags = 5;
+  bool download_remote_assets = 6;
+  bool inline_small_images = 7;
+  bool generate_toc = 8;
+  bool analyze_structure = 9;
+  bool keep_source_copy = 10;
+  repeated string enabled_cleaners = 11;
+  optional string converter_params_json = 12;
 }
 
-message PrepareImportMaterialResponse {
-  bool ok = 1;
-  string message = 2;
-  // Placeholder for normalized material descriptor (UTF-8 JSON).
-  bytes prepared_json = 3;
+message ImportResult {
+  string entry_html_path = 1;
+  string cleaned_html_path = 2;
+  string raw_text_path = 3;
+  repeated string assets = 4;
+  map<string, string> extracted_metadata = 5;
+  string manifest_path = 6;
+  string content_hash = 7;
+  string effective_conversion_mode = 8;
+  string converter_name = 9;
+  string converter_version = 10;
+  string cleaner_version = 11;
+}
+
+message SourceProcessJob {
+  string job_id = 1;
+  string status = 2;
+  string stage = 3;
+  float progress = 4;
+  optional string result_path = 5;
+  optional string error_code = 6;
+  optional string error_message = 7;
+  optional ImportResult result = 8;
+}
+
+message SourceProcessJobEvent {
+  string job_id = 1;
+  int64 sequence = 2;
+  string stage = 3;
+  string message = 4;
+  int64 created_at_unix = 5;
+}
+
+message ConverterCapability {
+  string source_type = 1;
+  string conversion_mode = 2;
+  string converter_name = 3;
+  string converter_version = 4;
+  string description = 5;
+}
+
+message CleanerCapability {
+  string cleaner_name = 1;
+  string cleaner_version = 2;
+  string description = 3;
+}
+
+message SubmitImportJobRequest {
+  string job_id = 1;
+  string source_type = 2;
+  optional string source_path = 3;
+  optional string source_uri = 4;
+  optional string source_url = 5;
+  optional string raw_html = 6;
+  string workspace_dir = 7;
+  string output_dir = 8;
+  string temp_dir = 9;
+  ImportOptions options = 10;
+  map<string, string> metadata = 11;
+  optional string idempotency_key = 12;
+}
+
+message SubmitImportJobResponse {
+  string job_id = 1;
+  string status = 2;
+  bool accepted = 3;
+}
+
+message GetJobRequest {
+  string job_id = 1;
+}
+
+message GetJobResponse {
+  SourceProcessJob job = 1;
+}
+
+message ListJobEventsRequest {
+  string job_id = 1;
+  optional int64 after_sequence = 2;
+}
+
+message ListJobEventsResponse {
+  repeated SourceProcessJobEvent events = 1;
+}
+
+message CancelJobRequest {
+  string job_id = 1;
+}
+
+message CancelJobResponse {
+  string job_id = 1;
+  string status = 2;
+}
+
+message GetCapabilitiesRequest {}
+
+message GetCapabilitiesResponse {
+  repeated string source_types = 1;
+  repeated string conversion_modes = 2;
+  repeated ConverterCapability converters = 3;
+  repeated CleanerCapability cleaners = 4;
 }

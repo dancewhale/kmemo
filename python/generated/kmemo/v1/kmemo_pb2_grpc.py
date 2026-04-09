@@ -66,10 +66,30 @@ class KmemoProcessorStub(object):
                 request_serializer=kmemo_dot_v1_dot_kmemo__pb2.CleanHtmlRequest.SerializeToString,
                 response_deserializer=kmemo_dot_v1_dot_kmemo__pb2.CleanHtmlResponse.FromString,
                 _registered_method=True)
-        self.PrepareImportMaterial = channel.unary_unary(
-                '/kmemo.v1.KmemoProcessor/PrepareImportMaterial',
-                request_serializer=kmemo_dot_v1_dot_kmemo__pb2.PrepareImportMaterialRequest.SerializeToString,
-                response_deserializer=kmemo_dot_v1_dot_kmemo__pb2.PrepareImportMaterialResponse.FromString,
+        self.SubmitImportJob = channel.unary_unary(
+                '/kmemo.v1.KmemoProcessor/SubmitImportJob',
+                request_serializer=kmemo_dot_v1_dot_kmemo__pb2.SubmitImportJobRequest.SerializeToString,
+                response_deserializer=kmemo_dot_v1_dot_kmemo__pb2.SubmitImportJobResponse.FromString,
+                _registered_method=True)
+        self.GetJob = channel.unary_unary(
+                '/kmemo.v1.KmemoProcessor/GetJob',
+                request_serializer=kmemo_dot_v1_dot_kmemo__pb2.GetJobRequest.SerializeToString,
+                response_deserializer=kmemo_dot_v1_dot_kmemo__pb2.GetJobResponse.FromString,
+                _registered_method=True)
+        self.ListJobEvents = channel.unary_unary(
+                '/kmemo.v1.KmemoProcessor/ListJobEvents',
+                request_serializer=kmemo_dot_v1_dot_kmemo__pb2.ListJobEventsRequest.SerializeToString,
+                response_deserializer=kmemo_dot_v1_dot_kmemo__pb2.ListJobEventsResponse.FromString,
+                _registered_method=True)
+        self.CancelJob = channel.unary_unary(
+                '/kmemo.v1.KmemoProcessor/CancelJob',
+                request_serializer=kmemo_dot_v1_dot_kmemo__pb2.CancelJobRequest.SerializeToString,
+                response_deserializer=kmemo_dot_v1_dot_kmemo__pb2.CancelJobResponse.FromString,
+                _registered_method=True)
+        self.GetCapabilities = channel.unary_unary(
+                '/kmemo.v1.KmemoProcessor/GetCapabilities',
+                request_serializer=kmemo_dot_v1_dot_kmemo__pb2.GetCapabilitiesRequest.SerializeToString,
+                response_deserializer=kmemo_dot_v1_dot_kmemo__pb2.GetCapabilitiesResponse.FromString,
                 _registered_method=True)
 
 
@@ -114,7 +134,31 @@ class KmemoProcessorServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def PrepareImportMaterial(self, request, context):
+    def SubmitImportJob(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetJob(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ListJobEvents(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def CancelJob(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetCapabilities(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -153,10 +197,30 @@ def add_KmemoProcessorServicer_to_server(servicer, server):
                     request_deserializer=kmemo_dot_v1_dot_kmemo__pb2.CleanHtmlRequest.FromString,
                     response_serializer=kmemo_dot_v1_dot_kmemo__pb2.CleanHtmlResponse.SerializeToString,
             ),
-            'PrepareImportMaterial': grpc.unary_unary_rpc_method_handler(
-                    servicer.PrepareImportMaterial,
-                    request_deserializer=kmemo_dot_v1_dot_kmemo__pb2.PrepareImportMaterialRequest.FromString,
-                    response_serializer=kmemo_dot_v1_dot_kmemo__pb2.PrepareImportMaterialResponse.SerializeToString,
+            'SubmitImportJob': grpc.unary_unary_rpc_method_handler(
+                    servicer.SubmitImportJob,
+                    request_deserializer=kmemo_dot_v1_dot_kmemo__pb2.SubmitImportJobRequest.FromString,
+                    response_serializer=kmemo_dot_v1_dot_kmemo__pb2.SubmitImportJobResponse.SerializeToString,
+            ),
+            'GetJob': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetJob,
+                    request_deserializer=kmemo_dot_v1_dot_kmemo__pb2.GetJobRequest.FromString,
+                    response_serializer=kmemo_dot_v1_dot_kmemo__pb2.GetJobResponse.SerializeToString,
+            ),
+            'ListJobEvents': grpc.unary_unary_rpc_method_handler(
+                    servicer.ListJobEvents,
+                    request_deserializer=kmemo_dot_v1_dot_kmemo__pb2.ListJobEventsRequest.FromString,
+                    response_serializer=kmemo_dot_v1_dot_kmemo__pb2.ListJobEventsResponse.SerializeToString,
+            ),
+            'CancelJob': grpc.unary_unary_rpc_method_handler(
+                    servicer.CancelJob,
+                    request_deserializer=kmemo_dot_v1_dot_kmemo__pb2.CancelJobRequest.FromString,
+                    response_serializer=kmemo_dot_v1_dot_kmemo__pb2.CancelJobResponse.SerializeToString,
+            ),
+            'GetCapabilities': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetCapabilities,
+                    request_deserializer=kmemo_dot_v1_dot_kmemo__pb2.GetCapabilitiesRequest.FromString,
+                    response_serializer=kmemo_dot_v1_dot_kmemo__pb2.GetCapabilitiesResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -334,7 +398,7 @@ class KmemoProcessor(object):
             _registered_method=True)
 
     @staticmethod
-    def PrepareImportMaterial(request,
+    def SubmitImportJob(request,
             target,
             options=(),
             channel_credentials=None,
@@ -347,9 +411,117 @@ class KmemoProcessor(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/kmemo.v1.KmemoProcessor/PrepareImportMaterial',
-            kmemo_dot_v1_dot_kmemo__pb2.PrepareImportMaterialRequest.SerializeToString,
-            kmemo_dot_v1_dot_kmemo__pb2.PrepareImportMaterialResponse.FromString,
+            '/kmemo.v1.KmemoProcessor/SubmitImportJob',
+            kmemo_dot_v1_dot_kmemo__pb2.SubmitImportJobRequest.SerializeToString,
+            kmemo_dot_v1_dot_kmemo__pb2.SubmitImportJobResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetJob(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/kmemo.v1.KmemoProcessor/GetJob',
+            kmemo_dot_v1_dot_kmemo__pb2.GetJobRequest.SerializeToString,
+            kmemo_dot_v1_dot_kmemo__pb2.GetJobResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ListJobEvents(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/kmemo.v1.KmemoProcessor/ListJobEvents',
+            kmemo_dot_v1_dot_kmemo__pb2.ListJobEventsRequest.SerializeToString,
+            kmemo_dot_v1_dot_kmemo__pb2.ListJobEventsResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def CancelJob(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/kmemo.v1.KmemoProcessor/CancelJob',
+            kmemo_dot_v1_dot_kmemo__pb2.CancelJobRequest.SerializeToString,
+            kmemo_dot_v1_dot_kmemo__pb2.CancelJobResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetCapabilities(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/kmemo.v1.KmemoProcessor/GetCapabilities',
+            kmemo_dot_v1_dot_kmemo__pb2.GetCapabilitiesRequest.SerializeToString,
+            kmemo_dot_v1_dot_kmemo__pb2.GetCapabilitiesResponse.FromString,
             options,
             channel_credentials,
             insecure,

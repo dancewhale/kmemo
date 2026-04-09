@@ -25,7 +25,11 @@ const (
 	KmemoProcessor_RescheduleCard_FullMethodName        = "/kmemo.v1.KmemoProcessor/RescheduleCard"
 	KmemoProcessor_OptimizeParameters_FullMethodName    = "/kmemo.v1.KmemoProcessor/OptimizeParameters"
 	KmemoProcessor_CleanHtml_FullMethodName             = "/kmemo.v1.KmemoProcessor/CleanHtml"
-	KmemoProcessor_PrepareImportMaterial_FullMethodName = "/kmemo.v1.KmemoProcessor/PrepareImportMaterial"
+	KmemoProcessor_SubmitImportJob_FullMethodName       = "/kmemo.v1.KmemoProcessor/SubmitImportJob"
+	KmemoProcessor_GetJob_FullMethodName                = "/kmemo.v1.KmemoProcessor/GetJob"
+	KmemoProcessor_ListJobEvents_FullMethodName         = "/kmemo.v1.KmemoProcessor/ListJobEvents"
+	KmemoProcessor_CancelJob_FullMethodName             = "/kmemo.v1.KmemoProcessor/CancelJob"
+	KmemoProcessor_GetCapabilities_FullMethodName       = "/kmemo.v1.KmemoProcessor/GetCapabilities"
 )
 
 // KmemoProcessorClient is the client API for KmemoProcessor service.
@@ -41,7 +45,11 @@ type KmemoProcessorClient interface {
 	RescheduleCard(ctx context.Context, in *RescheduleCardRequest, opts ...grpc.CallOption) (*RescheduleCardResponse, error)
 	OptimizeParameters(ctx context.Context, in *OptimizeParametersRequest, opts ...grpc.CallOption) (*OptimizeParametersResponse, error)
 	CleanHtml(ctx context.Context, in *CleanHtmlRequest, opts ...grpc.CallOption) (*CleanHtmlResponse, error)
-	PrepareImportMaterial(ctx context.Context, in *PrepareImportMaterialRequest, opts ...grpc.CallOption) (*PrepareImportMaterialResponse, error)
+	SubmitImportJob(ctx context.Context, in *SubmitImportJobRequest, opts ...grpc.CallOption) (*SubmitImportJobResponse, error)
+	GetJob(ctx context.Context, in *GetJobRequest, opts ...grpc.CallOption) (*GetJobResponse, error)
+	ListJobEvents(ctx context.Context, in *ListJobEventsRequest, opts ...grpc.CallOption) (*ListJobEventsResponse, error)
+	CancelJob(ctx context.Context, in *CancelJobRequest, opts ...grpc.CallOption) (*CancelJobResponse, error)
+	GetCapabilities(ctx context.Context, in *GetCapabilitiesRequest, opts ...grpc.CallOption) (*GetCapabilitiesResponse, error)
 }
 
 type kmemoProcessorClient struct {
@@ -112,10 +120,50 @@ func (c *kmemoProcessorClient) CleanHtml(ctx context.Context, in *CleanHtmlReque
 	return out, nil
 }
 
-func (c *kmemoProcessorClient) PrepareImportMaterial(ctx context.Context, in *PrepareImportMaterialRequest, opts ...grpc.CallOption) (*PrepareImportMaterialResponse, error) {
+func (c *kmemoProcessorClient) SubmitImportJob(ctx context.Context, in *SubmitImportJobRequest, opts ...grpc.CallOption) (*SubmitImportJobResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(PrepareImportMaterialResponse)
-	err := c.cc.Invoke(ctx, KmemoProcessor_PrepareImportMaterial_FullMethodName, in, out, cOpts...)
+	out := new(SubmitImportJobResponse)
+	err := c.cc.Invoke(ctx, KmemoProcessor_SubmitImportJob_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *kmemoProcessorClient) GetJob(ctx context.Context, in *GetJobRequest, opts ...grpc.CallOption) (*GetJobResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetJobResponse)
+	err := c.cc.Invoke(ctx, KmemoProcessor_GetJob_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *kmemoProcessorClient) ListJobEvents(ctx context.Context, in *ListJobEventsRequest, opts ...grpc.CallOption) (*ListJobEventsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListJobEventsResponse)
+	err := c.cc.Invoke(ctx, KmemoProcessor_ListJobEvents_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *kmemoProcessorClient) CancelJob(ctx context.Context, in *CancelJobRequest, opts ...grpc.CallOption) (*CancelJobResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CancelJobResponse)
+	err := c.cc.Invoke(ctx, KmemoProcessor_CancelJob_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *kmemoProcessorClient) GetCapabilities(ctx context.Context, in *GetCapabilitiesRequest, opts ...grpc.CallOption) (*GetCapabilitiesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCapabilitiesResponse)
+	err := c.cc.Invoke(ctx, KmemoProcessor_GetCapabilities_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +183,11 @@ type KmemoProcessorServer interface {
 	RescheduleCard(context.Context, *RescheduleCardRequest) (*RescheduleCardResponse, error)
 	OptimizeParameters(context.Context, *OptimizeParametersRequest) (*OptimizeParametersResponse, error)
 	CleanHtml(context.Context, *CleanHtmlRequest) (*CleanHtmlResponse, error)
-	PrepareImportMaterial(context.Context, *PrepareImportMaterialRequest) (*PrepareImportMaterialResponse, error)
+	SubmitImportJob(context.Context, *SubmitImportJobRequest) (*SubmitImportJobResponse, error)
+	GetJob(context.Context, *GetJobRequest) (*GetJobResponse, error)
+	ListJobEvents(context.Context, *ListJobEventsRequest) (*ListJobEventsResponse, error)
+	CancelJob(context.Context, *CancelJobRequest) (*CancelJobResponse, error)
+	GetCapabilities(context.Context, *GetCapabilitiesRequest) (*GetCapabilitiesResponse, error)
 	mustEmbedUnimplementedKmemoProcessorServer()
 }
 
@@ -164,8 +216,20 @@ func (UnimplementedKmemoProcessorServer) OptimizeParameters(context.Context, *Op
 func (UnimplementedKmemoProcessorServer) CleanHtml(context.Context, *CleanHtmlRequest) (*CleanHtmlResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CleanHtml not implemented")
 }
-func (UnimplementedKmemoProcessorServer) PrepareImportMaterial(context.Context, *PrepareImportMaterialRequest) (*PrepareImportMaterialResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method PrepareImportMaterial not implemented")
+func (UnimplementedKmemoProcessorServer) SubmitImportJob(context.Context, *SubmitImportJobRequest) (*SubmitImportJobResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SubmitImportJob not implemented")
+}
+func (UnimplementedKmemoProcessorServer) GetJob(context.Context, *GetJobRequest) (*GetJobResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetJob not implemented")
+}
+func (UnimplementedKmemoProcessorServer) ListJobEvents(context.Context, *ListJobEventsRequest) (*ListJobEventsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListJobEvents not implemented")
+}
+func (UnimplementedKmemoProcessorServer) CancelJob(context.Context, *CancelJobRequest) (*CancelJobResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CancelJob not implemented")
+}
+func (UnimplementedKmemoProcessorServer) GetCapabilities(context.Context, *GetCapabilitiesRequest) (*GetCapabilitiesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCapabilities not implemented")
 }
 func (UnimplementedKmemoProcessorServer) mustEmbedUnimplementedKmemoProcessorServer() {}
 func (UnimplementedKmemoProcessorServer) testEmbeddedByValue()                        {}
@@ -296,20 +360,92 @@ func _KmemoProcessor_CleanHtml_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
-func _KmemoProcessor_PrepareImportMaterial_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PrepareImportMaterialRequest)
+func _KmemoProcessor_SubmitImportJob_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SubmitImportJobRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(KmemoProcessorServer).PrepareImportMaterial(ctx, in)
+		return srv.(KmemoProcessorServer).SubmitImportJob(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: KmemoProcessor_PrepareImportMaterial_FullMethodName,
+		FullMethod: KmemoProcessor_SubmitImportJob_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(KmemoProcessorServer).PrepareImportMaterial(ctx, req.(*PrepareImportMaterialRequest))
+		return srv.(KmemoProcessorServer).SubmitImportJob(ctx, req.(*SubmitImportJobRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _KmemoProcessor_GetJob_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetJobRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(KmemoProcessorServer).GetJob(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: KmemoProcessor_GetJob_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(KmemoProcessorServer).GetJob(ctx, req.(*GetJobRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _KmemoProcessor_ListJobEvents_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListJobEventsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(KmemoProcessorServer).ListJobEvents(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: KmemoProcessor_ListJobEvents_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(KmemoProcessorServer).ListJobEvents(ctx, req.(*ListJobEventsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _KmemoProcessor_CancelJob_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CancelJobRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(KmemoProcessorServer).CancelJob(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: KmemoProcessor_CancelJob_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(KmemoProcessorServer).CancelJob(ctx, req.(*CancelJobRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _KmemoProcessor_GetCapabilities_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCapabilitiesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(KmemoProcessorServer).GetCapabilities(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: KmemoProcessor_GetCapabilities_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(KmemoProcessorServer).GetCapabilities(ctx, req.(*GetCapabilitiesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -346,8 +482,24 @@ var KmemoProcessor_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _KmemoProcessor_CleanHtml_Handler,
 		},
 		{
-			MethodName: "PrepareImportMaterial",
-			Handler:    _KmemoProcessor_PrepareImportMaterial_Handler,
+			MethodName: "SubmitImportJob",
+			Handler:    _KmemoProcessor_SubmitImportJob_Handler,
+		},
+		{
+			MethodName: "GetJob",
+			Handler:    _KmemoProcessor_GetJob_Handler,
+		},
+		{
+			MethodName: "ListJobEvents",
+			Handler:    _KmemoProcessor_ListJobEvents_Handler,
+		},
+		{
+			MethodName: "CancelJob",
+			Handler:    _KmemoProcessor_CancelJob_Handler,
+		},
+		{
+			MethodName: "GetCapabilities",
+			Handler:    _KmemoProcessor_GetCapabilities_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
