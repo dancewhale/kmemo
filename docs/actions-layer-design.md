@@ -140,11 +140,10 @@ internal/actions/
 
 - **CreateCard**（对齐增量阅读「从摘录生成条目」）：
   1. 校验 `Knowledge` 存在且可用。
-  2. 通过 `contracts.HTMLProcessor`（或 `flows` 内封装）清洗 HTML。
-  3. 通过 `contracts.FileStore` 写入正文（路径写入 `Card` 模型字段）。
-  4. `CardRepository.Create`；按需 `AddTags`。
-  5. 若卡片参与复习：初始化 `CardSRS`（规则见 `rules`）。
-  6. 若启用搜索：`SearchIndexer.IndexCard`（与 DB 提交顺序见第 7 节）。
+  2. 通过 `contracts.FileStore` 写入正文（路径写入 `Card` 模型字段）。
+  3. `CardRepository.Create`；按需 `AddTags`。
+  4. 若卡片参与复习：初始化 `CardSRS`（规则见 `rules`）。
+  5. 若启用搜索：`SearchIndexer.IndexCard`（与 DB 提交顺序见第 7 节）。
 - **UpdateCard**：更新元数据；若 HTML 变更则覆盖文件 + 重索引。
 - **DeleteCard**：软删除 DB；文件移入 trash 或按 FileStore 策略；索引删除。
 
@@ -208,7 +207,6 @@ internal/actions/
 | `CreateCard` | `card.Create` |
 | `GetDueCards` / `SubmitReview` / `UndoLastReview` | `review.DueCards` / `review.Submit` / `review.Undo` |
 | `ImportDocument` | `importing.Import` / `flows.ImportDocument`（提交异步 source-process job、跟踪状态、消费 manifest） |
-| `CleanHTML` | 继续视为通用 `HTMLProcessor` 的同步能力；Python 端可由 source-process 相关服务实现，但不改变上层 contract 语义 |
 
 完整列表可在实现阶段用表格补全。
 
@@ -234,7 +232,6 @@ internal/actions/
 |--------|------|------|
 | P0 | 建立 `internal/actions` 包与构造函数签名 | 定义 `Action` 依赖 `repository.*` 与 `contracts.*` 的注入方式，与 `bootstrap.NewDesktop` 扩展衔接。 |
 | P0 | `bootstrap` / `app.Desktop` 注入 Repository 与事务 | 使 Action 可运行；与 [`database-api-design.md`](./database-api-design.md) 中的 `Repository` 工厂一致。 |
-| P0 | `contracts.HTMLProcessor` + 适配到 Python 清洗 | `internal/htmlproc` 仍为 TODO；CreateCard / Import 依赖此能力。 |
 | P1 | `contracts.SearchIndexer` + Bleve（或 SQLite FTS）适配 | `internal/indexing/indexing.go` 仅为 TODO；与 `actions/search`、`card` 删除/更新索引联动。 |
 | P1 | 核心 `flows`：`SubmitReview`、`ImportDocument`、`UndoReview` | 步骤稳定后从 Action 中沉淀，避免 `submit.go` 膨胀。 |
 | P1 | `rules/review`、`rules/queue` | 评分语义、到期筛选、阅读队列排序策略。 |

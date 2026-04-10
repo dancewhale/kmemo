@@ -462,7 +462,7 @@ level=WARN msg="python grpc skipped" layer=bootstrap component=grpcworker reason
 ```text
 Desktop.CreateCard
   -> CreateCardAction
-  -> HTMLProcessor
+  -> SourceProcessor
   -> FileStore
   -> CardRepository
 ```

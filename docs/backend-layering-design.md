@@ -129,7 +129,7 @@ internal/storage/repository/
 
 负责：
 1. 校验 knowledge 是否存在
-2. 调用 HTMLProcessor 清理内容
+2. 调用 SourceProcessor 清理内容
 3. 调用 FileStore 保存 HTML
 4. 写入 Card 数据
 5. 绑定标签
@@ -232,6 +232,7 @@ internal/storage/repository/
 
 定义系统依赖的能力约定，而不是具体实现。
 
+暂时举例,不作为后续约束和设计基础
 例如：
 
 ```go
@@ -239,10 +240,6 @@ type SearchIndexer interface {
     IndexCard(ctx context.Context, doc SearchDocument) error
     DeleteCard(ctx context.Context, cardID string) error
     Search(ctx context.Context, query SearchQuery) ([]SearchHit, error)
-}
-
-type HTMLProcessor interface {
-    Clean(ctx context.Context, req CleanHTMLRequest) (*CleanHTMLResult, error)
 }
 
 type FileStore interface {
@@ -450,8 +447,7 @@ Bleve 是搜索基础设施，不是数据库本体。
 上层只依赖：
 
 ```go
-type HTMLProcessor interface {
-    Clean(ctx context.Context, req CleanHTMLRequest) (*CleanHTMLResult, error)
+type SourceProcessor interface {
 }
 ```
 
@@ -463,9 +459,8 @@ type HTMLProcessor interface {
 
 ### 原则
 
-`CleanHtml` 继续视为通用 `HTMLProcessor` 的同步轻量能力。
-Python 端即便由 source-process 相关服务实现，也不改变上层 contract 仍是 `HTMLProcessor` 这一事实。
-HTML 的业务规则可以由 actions/flows 决定，但 HTML 的技术处理能力应收敛到 `HTMLProcessor` 接口后面。
+Python 端即便由 source-process 相关服务实现，也不改变上层 contract 仍是 `SourceProcessor` 这一事实。
+HTML 的业务规则可以由 actions/flows 决定，但 HTML 的技术处理能力应收敛到 `SourceProcessor` 接口后面。
 
 ---
 
@@ -533,7 +528,7 @@ data/
 不要把 Python 视作一个大而全的“远程服务对象”，而是拆成能力接口：
 
 - `FSRSClient`
-- `HTMLProcessor`
+- `SourceProcessor`
 - `SourceProcessClient`
 
 连接层可通过共享 `grpcworker` 复用同一条 gRPC 连接，但 proto service 与 adapter 应按领域拆分，而不是继续保留历史上的单一 Python 网关大包。
@@ -612,14 +607,14 @@ data/
 
 - `SearchIndexer`
 - `FileStore`
-- `HTMLProcessor`
+- `SourceProcessor`
 - `FSRSClient`
 
 ### Adapters 层
 
 - `BleveIndexer`
 - `LocalFileStore`
-- `PythonHTMLProcessor`
+- `PythonSourceProcessor`
 - `PythonFSRSClient`
 
 这样一眼就能看出：
@@ -694,7 +689,7 @@ Wails UI
   -> Desktop.CreateCard(req)
   -> actions/card/create.go
       -> repository.Knowledge.GetByID
-      -> contracts.HTMLProcessor.Clean
+      -> contracts.SourceProcessor.Clean
       -> contracts.FileStore.SaveHTML
       -> repository.Card.Create
       -> repository.Card.AddTags
