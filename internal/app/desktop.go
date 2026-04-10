@@ -7,22 +7,24 @@ import (
 
 	"kmemo/internal/adapters/grpcworker"
 	"kmemo/internal/config"
+	"kmemo/internal/contracts/sourceprocess"
 	"kmemo/internal/zaplog"
 )
 
 // Desktop is bound to the Wails frontend. Keep methods small and delegate to internal/services later.
 type Desktop struct {
-	cfg    config.Config
-	logger *zap.Logger
-	worker *grpcworker.Client
+	cfg           config.Config
+	logger        *zap.Logger
+	worker        *grpcworker.Client
+	sourceProcess sourceprocess.Processor
 }
 
 // NewDesktop constructs the Wails-facing app shell.
-func NewDesktop(cfg config.Config, logger *zap.Logger, worker *grpcworker.Client) *Desktop {
+func NewDesktop(cfg config.Config, logger *zap.Logger, worker *grpcworker.Client, sourceProcess sourceprocess.Processor) *Desktop {
 	if logger == nil {
 		logger = zaplog.Nop()
 	}
-	return &Desktop{cfg: cfg, logger: logger.Named("desktop"), worker: worker}
+	return &Desktop{cfg: cfg, logger: logger.Named("desktop"), worker: worker, sourceProcess: sourceProcess}
 }
 
 // OnStartup is registered with Wails for lifecycle hooks.
@@ -41,6 +43,11 @@ func (d *Desktop) GetVersion() string {
 // PythonEndpoint exposes where the UI thinks the worker lives (debug / future settings UI).
 func (d *Desktop) PythonEndpoint() string {
 	return d.cfg.PythonGRPCAddr
+}
+
+// GetSourceProcessCapabilities returns worker-advertised source-process capabilities.
+func (d *Desktop) GetSourceProcessCapabilities(ctx context.Context) (*sourceprocess.Capabilities, error) {
+	return d.sourceProcess.GetCapabilities(ctx)
 }
 
 // OnShutdown releases host resources when the Wails app exits.

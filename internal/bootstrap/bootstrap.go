@@ -9,18 +9,22 @@ import (
 	grpcpython "kmemo/internal/adapters/fsrs/grpc_python"
 	"kmemo/internal/adapters/fsrs/noop"
 	"kmemo/internal/adapters/grpcworker"
+	sourceprocessgrpc "kmemo/internal/adapters/sourceprocess/grpc_python"
+	sourceprocessnoop "kmemo/internal/adapters/sourceprocess/noop"
 	"kmemo/internal/app"
 	"kmemo/internal/config"
 	"kmemo/internal/contracts/fsrs"
+	"kmemo/internal/contracts/sourceprocess"
 	"kmemo/internal/zaplog"
 )
 
 // Headless bundles dependencies for CLI / non-UI entrypoints.
 type Headless struct {
-	Config config.Config
-	Logger *zap.Logger
-	Worker *grpcworker.Client
-	FSRS   fsrs.FSRSScheduler
+	Config        config.Config
+	Logger        *zap.Logger
+	Worker        *grpcworker.Client
+	FSRS          fsrs.FSRSScheduler
+	SourceProcess sourceprocess.Processor
 }
 
 // NewHeadless wires config, optional Python gRPC worker, and FSRS scheduler port.
@@ -49,6 +53,7 @@ func NewHeadless(ctx context.Context) (*Headless, error) {
 
 	var worker *grpcworker.Client
 	var sched fsrs.FSRSScheduler = &noop.Scheduler{}
+	var processor sourceprocess.Processor = &sourceprocessnoop.Processor{}
 	if !cfg.SkipPython {
 		worker, err = grpcworker.New(ctx, cfg)
 		if err != nil {
@@ -57,10 +62,11 @@ func NewHeadless(ctx context.Context) (*Headless, error) {
 			return nil, fmt.Errorf("grpc worker: %w", err)
 		}
 		sched = grpcpython.NewScheduler(worker.Processor())
+		processor = sourceprocessgrpc.NewProcessor(worker.Processor())
 	} else {
 		logger.Warn("python grpc worker skipped")
 	}
-	return &Headless{Config: cfg, Logger: logger, Worker: worker, FSRS: sched}, nil
+	return &Headless{Config: cfg, Logger: logger, Worker: worker, FSRS: sched, SourceProcess: processor}, nil
 }
 
 // NewDesktop builds the object graph for Wails bindings.
@@ -69,5 +75,5 @@ func NewDesktop(ctx context.Context) (*app.Desktop, error) {
 	if err != nil {
 		return nil, err
 	}
-	return app.NewDesktop(h.Config, h.Logger, h.Worker), nil
+	return app.NewDesktop(h.Config, h.Logger, h.Worker, h.SourceProcess), nil
 }

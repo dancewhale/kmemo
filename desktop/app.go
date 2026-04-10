@@ -21,7 +21,7 @@ func newApp() (*App, error) {
 		return nil, err
 	}
 	return &App{
-		Desktop: app.NewDesktop(h.Config, h.Logger, h.Worker),
+		Desktop: app.NewDesktop(h.Config, h.Logger, h.Worker, h.SourceProcess),
 		logger:  h.Logger,
 	}, nil
 }
