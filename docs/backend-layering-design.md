@@ -271,7 +271,6 @@ type SourceProcessClient interface {
 internal/adapters/
 ├── bleve/
 ├── filestore/
-├── htmlproc/
 ├── grpcworker/
 ├── fsrs/
 ├── sourceprocess/
@@ -377,7 +376,6 @@ internal/
 ├── adapters/                   # contracts 的具体适配实现
 │   ├── bleve/
 │   ├── filestore/
-│   ├── htmlproc/
 │   ├── grpcworker/
 │   ├── fsrs/
 │   ├── sourceprocess/
@@ -436,11 +434,6 @@ Bleve 是搜索基础设施，不是数据库本体。
 
 ## 5.2 HTML 处理
 
-### 建议放置
-
-- 抽象接口：`internal/contracts/html.go`
-- Go 实现：`internal/adapters/htmlproc/`
-- Python 调用实现：`internal/adapters/htmlproc/` 或通过共享 `grpcworker` 连接的远端适配器
 
 ### 设计建议
 

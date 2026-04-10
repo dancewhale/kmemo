@@ -113,7 +113,7 @@ task build:wails
 | **cmd/kmemo** | 进程入口、信号处理、预留编排 |
 | **internal/bootstrap** | 组装 config、pyclient、Wails 绑定对象 |
 | **internal/pyclient** | gRPC 客户端封装（生成代码在 `gen/`） |
-| **internal/storage / htmlproc / indexing** | 仅占位包，为 SQLite / HTML / 索引预留 |
+| **internal/storage /  indexing** | 仅占位包，为 SQLite / HTML / 索引预留 |
 | **internal/services** | 未来协调层；现为占位 |
 | **python/app** | gRPC 服务实现，按 `fsrs` / `html` / `import` 分文件占位 |
 | **desktop** | Wails `main` + 最小 Vite 前端，经 `window.go.main.App` 调用 Go |

@@ -226,7 +226,7 @@ internal/actions/
 
 ## 10. 底层依赖未实现项 — 建议优先任务
 
-结合当前仓库状态（`internal/actions` 尚未建立；`contracts` 除 `FileStore` 外多数能力未以接口固化；`internal/indexing` 为占位；`htmlproc` 未接线；Desktop 尚未注入 Repository）：
+结合当前仓库状态（`internal/actions` 尚未建立；`contracts` 除 `FileStore` 外多数能力未以接口固化；`internal/indexing` 为占位；Desktop 尚未注入 Repository）：
 
 | 优先级 | 任务 | 说明 |
 |--------|------|------|
