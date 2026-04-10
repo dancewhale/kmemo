@@ -1,0 +1,164 @@
+package app
+
+import (
+	"strings"
+	"time"
+
+	"kmemo/internal/actions/card"
+	"kmemo/internal/storage/models"
+	"kmemo/internal/storage/repository"
+)
+
+type CardDTO struct {
+	ID               string     `json:"id"`
+	KnowledgeID      string     `json:"knowledgeId"`
+	KnowledgeName    string     `json:"knowledgeName"`
+	SourceDocumentID *string    `json:"sourceDocumentId"`
+	ParentID         *string    `json:"parentId"`
+	Title            string     `json:"title"`
+	CardType         string     `json:"cardType"`
+	HTMLPath         string     `json:"htmlPath"`
+	Status           string     `json:"status"`
+	Tags             []*TagDTO  `json:"tags"`
+	SRS              *SRSDTO    `json:"srs"`
+	CreatedAt        time.Time  `json:"createdAt"`
+	UpdatedAt        time.Time  `json:"updatedAt"`
+}
+
+type CardFilters struct {
+	KnowledgeID *string  `json:"knowledgeId"`
+	CardType    string   `json:"cardType"`
+	Status      string   `json:"status"`
+	TagIDs      []string `json:"tagIds"`
+	Keyword     string   `json:"keyword"`
+	Limit       int      `json:"limit"`
+	Offset      int      `json:"offset"`
+}
+
+type CreateCardRequest struct {
+	KnowledgeID      string   `json:"knowledgeId"`
+	SourceDocumentID *string  `json:"sourceDocumentId"`
+	ParentID         *string  `json:"parentId"`
+	Title            string   `json:"title"`
+	CardType         string   `json:"cardType"`
+	HTMLContent      string   `json:"htmlContent"`
+	TagIDs           []string `json:"tagIds"`
+}
+
+type UpdateCardRequest struct {
+	Title       string `json:"title"`
+	HTMLContent string `json:"htmlContent"`
+	Status      string `json:"status"`
+}
+
+func (d *Desktop) CreateCard(req CreateCardRequest) (string, error) {
+	if strings.TrimSpace(req.KnowledgeID) == "" || strings.TrimSpace(req.Title) == "" || strings.TrimSpace(req.CardType) == "" {
+		return "", repository.ErrInvalidInput
+	}
+	return d.actions.Card.Create(d.actionContext(), card.CreateInput{
+		KnowledgeID:      strings.TrimSpace(req.KnowledgeID),
+		SourceDocumentID: req.SourceDocumentID,
+		ParentID:         req.ParentID,
+		Title:            strings.TrimSpace(req.Title),
+		CardType:         strings.TrimSpace(req.CardType),
+		HTMLContent:      req.HTMLContent,
+		TagIDs:           req.TagIDs,
+	})
+}
+
+func (d *Desktop) GetCard(id string) (*CardDTO, error) {
+	item, err := d.actions.Card.Get(d.actionContext(), id)
+	if err != nil {
+		return nil, err
+	}
+	return toCardDTO(item, nil), nil
+}
+
+func (d *Desktop) ListCards(filters CardFilters) ([]*CardDTO, int64, error) {
+	items, total, err := d.actions.Card.List(d.actionContext(), repository.ListCardOptions{
+		KnowledgeID: filters.KnowledgeID,
+		CardType:    filters.CardType,
+		Status:      filters.Status,
+		TagIDs:      filters.TagIDs,
+		Keyword:     filters.Keyword,
+		Limit:       filters.Limit,
+		Offset:      filters.Offset,
+		Preload:     []string{"SRS", "Knowledge"},
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+	result := make([]*CardDTO, 0, len(items))
+	for _, item := range items {
+		tags, _ := d.actions.Card.GetTags(d.actionContext(), item.ID)
+		result = append(result, toCardDTO(item, tags))
+	}
+	return result, total, nil
+}
+
+func (d *Desktop) UpdateCard(id string, req UpdateCardRequest) error {
+	if strings.TrimSpace(req.Title) == "" {
+		return repository.ErrInvalidInput
+	}
+	return d.actions.Card.Update(d.actionContext(), id, card.UpdateInput{
+		Title:       strings.TrimSpace(req.Title),
+		HTMLContent: req.HTMLContent,
+		Status:      strings.TrimSpace(req.Status),
+	})
+}
+
+func (d *Desktop) DeleteCard(id string) error {
+	return d.actions.Card.Delete(d.actionContext(), id)
+}
+
+func (d *Desktop) AddCardTags(cardID string, tagIDs []string) error {
+	return d.actions.Card.AddTags(d.actionContext(), cardID, tagIDs)
+}
+
+func (d *Desktop) RemoveCardTags(cardID string, tagIDs []string) error {
+	return d.actions.Card.RemoveTags(d.actionContext(), cardID, tagIDs)
+}
+
+func (d *Desktop) GetCardTags(cardID string) ([]*TagDTO, error) {
+	items, err := d.actions.Card.GetTags(d.actionContext(), cardID)
+	if err != nil {
+		return nil, err
+	}
+	return toTagDTOs(items), nil
+}
+
+func (d *Desktop) SuspendCard(cardID string) error {
+	return d.actions.Card.Suspend(d.actionContext(), cardID)
+}
+
+func (d *Desktop) ResumeCard(cardID string) error {
+	return d.actions.Card.Resume(d.actionContext(), cardID)
+}
+
+func toCardDTO(model *models.Card, tags []*models.Tag) *CardDTO {
+	if model == nil {
+		return nil
+	}
+	dto := &CardDTO{
+		ID:               model.ID,
+		KnowledgeID:      model.KnowledgeID,
+		SourceDocumentID: model.SourceDocumentID,
+		ParentID:         model.ParentID,
+		Title:            model.Title,
+		CardType:         model.CardType,
+		HTMLPath:         model.Path,
+		Status:           model.Status,
+		CreatedAt:        model.CreatedAt,
+		UpdatedAt:        model.UpdatedAt,
+	}
+	if model.Knowledge != nil {
+		dto.KnowledgeName = model.Knowledge.Name
+	}
+	if model.SRS != nil {
+		dto.SRS = toSRSDTO(model.SRS)
+	}
+	if tags != nil {
+		dto.Tags = toTagDTOs(tags)
+	}
+	return dto
+}

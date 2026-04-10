@@ -113,6 +113,10 @@ func (r *reviewLogRepo) GetStatsByDateRange(ctx context.Context, startDate, endD
 		dao.ReviewLog.ReviewedAt.Between(startDate, endDate),
 	)
 
+	if knowledgeID != nil {
+		q = q.Joins(dao.ReviewLog.Card).Where(dao.Card.KnowledgeID.Eq(*knowledgeID))
+	}
+
 	logs, err := q.Find()
 	if err != nil {
 		return nil, convertError(err)

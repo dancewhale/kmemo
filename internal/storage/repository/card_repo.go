@@ -111,7 +111,7 @@ func (r *cardRepo) Delete(ctx context.Context, id string) error {
 	return convertError(err)
 }
 
-func (r *cardRepo) buildCardQuery(ctx context.Context, opts ListCardOptions) dao.ICardDo {
+func (r *cardRepo) buildCardQuery(ctx context.Context, opts ListCardOptions) (dao.ICardDo, error) {
 	q := dao.Use(r.db).Card.WithContext(ctx)
 
 	if opts.KnowledgeID != nil {
@@ -128,6 +128,24 @@ func (r *cardRepo) buildCardQuery(ctx context.Context, opts ListCardOptions) dao
 	}
 	if opts.Status != "" {
 		q = q.Where(dao.Card.Status.Eq(opts.Status))
+	}
+	if len(opts.TagIDs) > 0 {
+		cardIDs := make([]string, 0)
+		err := r.db.WithContext(ctx).
+			Model(&models.CardTag{}).
+			Select("card_id").
+			Where("tag_id IN ?", opts.TagIDs).
+			Group("card_id").
+			Having("COUNT(DISTINCT tag_id) = ?", len(opts.TagIDs)).
+			Pluck("card_id", &cardIDs).Error
+		if err != nil {
+			return nil, convertError(err)
+		}
+		if len(cardIDs) == 0 {
+			q = q.Where(dao.Card.ID.Eq("__no_matching_card__"))
+		} else {
+			q = q.Where(dao.Card.ID.In(cardIDs...))
+		}
 	}
 	if opts.IsRoot != nil {
 		q = q.Where(dao.Card.IsRoot.Is(*opts.IsRoot))
@@ -149,11 +167,14 @@ func (r *cardRepo) buildCardQuery(ctx context.Context, opts ListCardOptions) dao
 		}
 	}
 
-	return q
+	return q, nil
 }
 
 func (r *cardRepo) List(ctx context.Context, opts ListCardOptions) ([]*models.Card, int64, error) {
-	q := r.buildCardQuery(ctx, opts)
+	q, err := r.buildCardQuery(ctx, opts)
+	if err != nil {
+		return nil, 0, err
+	}
 
 	count, err := q.Count()
 	if err != nil {

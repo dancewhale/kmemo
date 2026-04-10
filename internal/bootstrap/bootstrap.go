@@ -3,9 +3,12 @@ package bootstrap
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
 	"go.uber.org/zap"
 
+	"kmemo/internal/actions"
+	filestoreadapter "kmemo/internal/adapters/filestore"
 	grpcpython "kmemo/internal/adapters/fsrs/grpc_python"
 	"kmemo/internal/adapters/fsrs/noop"
 	"kmemo/internal/adapters/grpcworker"
@@ -13,8 +16,12 @@ import (
 	sourceprocessnoop "kmemo/internal/adapters/sourceprocess/noop"
 	"kmemo/internal/app"
 	"kmemo/internal/config"
+	"kmemo/internal/contracts"
 	"kmemo/internal/contracts/fsrs"
 	"kmemo/internal/contracts/sourceprocess"
+	"kmemo/internal/file"
+	"kmemo/internal/storage"
+	"kmemo/internal/storage/repository"
 	"kmemo/internal/zaplog"
 )
 
@@ -25,9 +32,14 @@ type Headless struct {
 	Worker        *grpcworker.Client
 	FSRS          fsrs.FSRSScheduler
 	SourceProcess sourceprocess.Processor
+	Storage       *storage.Storage
+	Repositories  repository.RepositoryFactory
+	Transactions  repository.TransactionManager
+	FileStore     contracts.FileStore
+	Actions       *actions.Actions
 }
 
-// NewHeadless wires config, optional Python gRPC worker, and FSRS scheduler port.
+// NewHeadless wires config, local storage, file store, optional Python gRPC worker, and action-layer dependencies.
 func NewHeadless(ctx context.Context) (*Headless, error) {
 	cfg, err := config.Load()
 	if err != nil {
@@ -51,6 +63,27 @@ func NewHeadless(ctx context.Context) (*Headless, error) {
 		zap.Duration("db_slow_threshold", cfg.DBSlowThreshold),
 	)
 
+	store, err := storage.New(storage.Options{
+		Driver:          cfg.DBDriver,
+		DSN:             filepath.Clean(cfg.DBPath),
+		LogLevel:        cfg.LogLevel,
+		SlowThreshold:   cfg.DBSlowThreshold,
+		RepositoryDebug: cfg.RepositoryDebug,
+		Logger:          logger,
+	}, true)
+	if err != nil {
+		return nil, fmt.Errorf("init storage: %w", err)
+	}
+
+	repos := repository.NewRepositoryFactory(store.DB())
+	txManager := repository.NewTransactionManager(store.DB())
+
+	fileBackend, err := file.NewFileStore(file.DefaultConfig(cfg.VaultDir))
+	if err != nil {
+		return nil, fmt.Errorf("init file store: %w", err)
+	}
+	fileStore := filestoreadapter.NewAdapter(fileBackend)
+
 	var worker *grpcworker.Client
 	var sched fsrs.FSRSScheduler = &noop.Scheduler{}
 	var processor sourceprocess.Processor = &sourceprocessnoop.Processor{}
@@ -66,7 +99,27 @@ func NewHeadless(ctx context.Context) (*Headless, error) {
 	} else {
 		logger.Warn("python grpc worker skipped")
 	}
-	return &Headless{Config: cfg, Logger: logger, Worker: worker, FSRS: sched, SourceProcess: processor}, nil
+
+	actionSet := actions.New(actions.Dependencies{
+		Repositories:  repos,
+		Transactions:  txManager,
+		FileStore:     fileStore,
+		FSRS:          sched,
+		SourceProcess: processor,
+	})
+
+	return &Headless{
+		Config:        cfg,
+		Logger:        logger,
+		Worker:        worker,
+		FSRS:          sched,
+		SourceProcess: processor,
+		Storage:       store,
+		Repositories:  repos,
+		Transactions:  txManager,
+		FileStore:     fileStore,
+		Actions:       actionSet,
+	}, nil
 }
 
 // NewDesktop builds the object graph for Wails bindings.
@@ -75,5 +128,5 @@ func NewDesktop(ctx context.Context) (*app.Desktop, error) {
 	if err != nil {
 		return nil, err
 	}
-	return app.NewDesktop(h.Config, h.Logger, h.Worker, h.SourceProcess), nil
+	return app.NewDesktop(h.Config, h.Logger, h.Worker, h.SourceProcess, h.Actions), nil
 }

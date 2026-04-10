@@ -74,6 +74,10 @@ func (r *srsRepo) GetByCardID(ctx context.Context, cardID string) (*models.CardS
 func (r *srsRepo) GetDueCards(ctx context.Context, opts DueCardsOptions) ([]*models.CardSRS, error) {
 	q := dao.Use(r.db).CardSRS.WithContext(ctx).Where(dao.CardSRS.Suspended.Is(false))
 
+	if opts.KnowledgeID != nil {
+		q = q.Joins(dao.CardSRS.Card).Where(dao.Card.KnowledgeID.Eq(*opts.KnowledgeID))
+	}
+
 	if len(opts.States) > 0 {
 		q = q.Where(dao.CardSRS.FSRSState.In(opts.States...))
 	}
@@ -103,17 +107,35 @@ func (r *srsRepo) GetStatistics(ctx context.Context, knowledgeID *string) (*SRSS
 	q := dao.Use(r.db).CardSRS.WithContext(ctx)
 
 	if knowledgeID != nil {
-		q = q.Where(dao.Use(r.db).Card.WithContext(ctx).Where(dao.Card.KnowledgeID.Eq(*knowledgeID)))
+		q = q.Joins(dao.CardSRS.Card).Where(dao.Card.KnowledgeID.Eq(*knowledgeID))
 	}
 
-	total, _ := q.Count()
-	newCount, _ := q.Where(dao.CardSRS.FSRSState.Eq("new")).Count()
-	learningCount, _ := q.Where(dao.CardSRS.FSRSState.Eq("learning")).Count()
-	reviewCount, _ := q.Where(dao.CardSRS.FSRSState.Eq("review")).Count()
-	relearningCount, _ := q.Where(dao.CardSRS.FSRSState.Eq("relearning")).Count()
+	total, err := q.Count()
+	if err != nil {
+		return nil, convertError(err)
+	}
+	newCount, err := q.Where(dao.CardSRS.FSRSState.Eq("new")).Count()
+	if err != nil {
+		return nil, convertError(err)
+	}
+	learningCount, err := q.Where(dao.CardSRS.FSRSState.Eq("learning")).Count()
+	if err != nil {
+		return nil, convertError(err)
+	}
+	reviewCount, err := q.Where(dao.CardSRS.FSRSState.Eq("review")).Count()
+	if err != nil {
+		return nil, convertError(err)
+	}
+	relearningCount, err := q.Where(dao.CardSRS.FSRSState.Eq("relearning")).Count()
+	if err != nil {
+		return nil, convertError(err)
+	}
 
 	now := time.Now()
-	dueToday, _ := q.Where(dao.CardSRS.DueAt.Lte(now)).Count()
+	dueToday, err := q.Where(dao.CardSRS.DueAt.Lte(now)).Count()
+	if err != nil {
+		return nil, convertError(err)
+	}
 
 	return &SRSStatistics{
 		NewCount:        int(newCount),

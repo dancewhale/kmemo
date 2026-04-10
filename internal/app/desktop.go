@@ -5,26 +5,28 @@ import (
 
 	"go.uber.org/zap"
 
+	"kmemo/internal/actions"
 	"kmemo/internal/adapters/grpcworker"
 	"kmemo/internal/config"
 	"kmemo/internal/contracts/sourceprocess"
 	"kmemo/internal/zaplog"
 )
 
-// Desktop is bound to the Wails frontend. Keep methods small and delegate to internal/services later.
+// Desktop is bound to the Wails frontend. Keep methods small and delegate to actions.
 type Desktop struct {
 	cfg           config.Config
 	logger        *zap.Logger
 	worker        *grpcworker.Client
 	sourceProcess sourceprocess.Processor
+	actions       *actions.Actions
 }
 
 // NewDesktop constructs the Wails-facing app shell.
-func NewDesktop(cfg config.Config, logger *zap.Logger, worker *grpcworker.Client, sourceProcess sourceprocess.Processor) *Desktop {
+func NewDesktop(cfg config.Config, logger *zap.Logger, worker *grpcworker.Client, sourceProcess sourceprocess.Processor, actionSet *actions.Actions) *Desktop {
 	if logger == nil {
 		logger = zaplog.Nop()
 	}
-	return &Desktop{cfg: cfg, logger: logger.Named("desktop"), worker: worker, sourceProcess: sourceProcess}
+	return &Desktop{cfg: cfg, logger: logger.Named("desktop"), worker: worker, sourceProcess: sourceProcess, actions: actionSet}
 }
 
 // OnStartup is registered with Wails for lifecycle hooks.
