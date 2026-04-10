@@ -119,7 +119,6 @@ type PythonClient interface {
 - `SourceProcessClient`
 - `SearchIndexer`
 - `FileStore`
-- `Clock`
 
 这样以后即使 `FileStore` 从 Python 改成 Go，本层接口仍然稳定。
 
@@ -248,29 +247,6 @@ type SourceProcessOptions struct {
 
 ---
 
-## 6.6 Clock
-
-### 适用场景
-
-- 复习时间、导入时间、统计窗口
-- 避免在 actions/flows 中直接到处调用 `time.Now()`
-
-### 建议接口
-
-```go
-type Clock interface {
-    Now() time.Time
-}
-```
-
-### 设计要点
-
-- 接口很小，但很有价值
-- 便于测试复习调度、到期判断、统计逻辑
-- 不建议再额外设计复杂时间工具层
-
----
-
 ## 7. 错误设计建议
 
 建议在 `internal/contracts/errors.go` 统一定义错误语义：
@@ -374,8 +350,6 @@ contracts.FileStore
   ├── adapters/filestore/local.go
   └── adapters/filestore/object_store.go   # 未来可选
 
-contracts.Clock
-  └── adapters/clock/system.go
 ```
 
 原则：
@@ -415,7 +389,6 @@ type ExternalContracts struct {
     SearchIndexer     contracts.SearchIndexer
     FSRSClient        contracts.FSRSClient
     SourceProcess     contracts.SourceProcessClient
-    Clock             contracts.Clock
 }
 ```
 
@@ -430,13 +403,11 @@ type ExternalContracts struct {
 1. `FileStore`
 2. `FSRSClient`
 3. `SourceProcessClient`
-4. `Clock`
 5. `SearchIndexer`（接口先行，实现可后置）
 
 ### 推荐原因
 
 - `FSRSClient` 与 `SourceProcessClient` 能直接对应当前 Python 侧能力拆分
-- `Clock` 很轻，但对测试和后续规则实现很有帮助
 - `FileStore` 会很快在卡片 HTML 与资源落盘中变成刚需
 - `SearchIndexer` 先定义边界，后接 Bleve 时不会再反向侵入 action
 
