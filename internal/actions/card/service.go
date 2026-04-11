@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"time"
 
@@ -47,6 +48,12 @@ type UpdateInput struct {
 	Title       string
 	HTMLContent string
 	Status      string
+}
+
+// GetOutput 为单卡查询结果：包含数据库中的 Card 以及从 FileStore 读取的正文 HTML。
+type GetOutput struct {
+	Card         *models.Card
+	HTMLContent  string
 }
 
 func (s *Service) Create(ctx context.Context, input CreateInput) (string, error) {
@@ -164,8 +171,33 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (string, error)
 	return id, nil
 }
 
-func (s *Service) Get(ctx context.Context, id string) (*models.Card, error) {
-	return s.deps.Cards.GetByID(ctx, id, "SRS", "Knowledge")
+func (s *Service) Get(ctx context.Context, id string) (*GetOutput, error) {
+	c, err := s.deps.Cards.GetByID(ctx, id, "SRS", "Knowledge")
+	if err != nil {
+		return nil, err
+	}
+	out := &GetOutput{Card: c}
+	if s.deps.FileStore == nil {
+		return out, nil
+	}
+	lookup := contracts.FileObjectLookup{
+		Ref: contracts.FileObjectRef{
+			Kind: contracts.FileObjectKindCard,
+			ID:   contracts.FileObjectID(c.ID),
+		},
+	}
+	if c.Slug != "" {
+		lookup.Name = &contracts.FileObjectNameHint{Slug: c.Slug, Ext: "html"}
+	}
+	data, _, err := s.deps.FileStore.ReadFileObject(ctx, lookup, contracts.FileObjectScopeAny)
+	if err != nil {
+		if errors.Is(err, file.ErrFileObjectNotFound) {
+			return out, nil
+		}
+		return nil, err
+	}
+	out.HTMLContent = string(data)
+	return out, nil
 }
 
 func (s *Service) List(ctx context.Context, opts repository.ListCardOptions) ([]*models.Card, int64, error) {

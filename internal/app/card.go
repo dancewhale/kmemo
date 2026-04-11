@@ -18,6 +18,7 @@ type CardDTO struct {
 	Title            string     `json:"title"`
 	CardType         string     `json:"cardType"`
 	HTMLPath         string     `json:"htmlPath"`
+	HTMLContent      string     `json:"htmlContent"`
 	Status           string     `json:"status"`
 	Tags             []*TagDTO  `json:"tags"`
 	SRS              *SRSDTO    `json:"srs"`
@@ -31,6 +32,10 @@ type CardFilters struct {
 	Status      string   `json:"status"`
 	TagIDs      []string `json:"tagIds"`
 	Keyword     string   `json:"keyword"`
+	ParentID    *string  `json:"parentId"`
+	IsRoot      *bool    `json:"isRoot"`
+	OrderBy     string   `json:"orderBy"`   // title, created_at, updated_at, sort_order；空则按仓储默认（无显式排序）
+	OrderDesc   bool     `json:"orderDesc"`
 	Limit       int      `json:"limit"`
 	Offset      int      `json:"offset"`
 }
@@ -67,20 +72,26 @@ func (d *Desktop) CreateCard(req CreateCardRequest) (string, error) {
 }
 
 func (d *Desktop) GetCard(id string) (*CardDTO, error) {
-	item, err := d.actions.Card.Get(d.actionContext(), id)
+	out, err := d.actions.Card.Get(d.actionContext(), id)
 	if err != nil {
 		return nil, err
 	}
-	return toCardDTO(item, nil), nil
+	dto := toCardDTO(out.Card, nil)
+	dto.HTMLContent = out.HTMLContent
+	return dto, nil
 }
 
 func (d *Desktop) ListCards(filters CardFilters) ([]*CardDTO, int64, error) {
 	items, total, err := d.actions.Card.List(d.actionContext(), repository.ListCardOptions{
 		KnowledgeID: filters.KnowledgeID,
+		ParentID:    filters.ParentID,
 		CardType:    filters.CardType,
 		Status:      filters.Status,
 		TagIDs:      filters.TagIDs,
 		Keyword:     filters.Keyword,
+		IsRoot:      filters.IsRoot,
+		OrderBy:     filters.OrderBy,
+		OrderDesc:   filters.OrderDesc,
 		Limit:       filters.Limit,
 		Offset:      filters.Offset,
 		Preload:     []string{"SRS", "Knowledge"},
