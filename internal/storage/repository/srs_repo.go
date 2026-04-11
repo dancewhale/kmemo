@@ -18,6 +18,9 @@ type SRSRepository interface {
 	GetDueCards(ctx context.Context, opts DueCardsOptions) ([]*models.CardSRS, error)
 	UpdateAfterReview(ctx context.Context, cardID string, srs *models.CardSRS, log *models.ReviewLog) error
 	GetStatistics(ctx context.Context, knowledgeID *string) (*SRSStatistics, error)
+
+	// CountDueCardsByKnowledgeIDs 按知识库统计「当前到期」的 SRS 条目数（与 GetDueCards 过滤条件一致；未出现在结果中的 knowledge_id 视为 0）
+	CountDueCardsByKnowledgeIDs(ctx context.Context, knowledgeIDs []string) (map[string]int64, error)
 	Suspend(ctx context.Context, cardID string) error
 	Resume(ctx context.Context, cardID string) error
 	UndoLastReview(ctx context.Context, cardID string) error
@@ -101,6 +104,34 @@ func (r *srsRepo) UpdateAfterReview(ctx context.Context, cardID string, srs *mod
 		}
 		return dao.Use(tx).ReviewLog.WithContext(ctx).Create(log)
 	})
+}
+
+func (r *srsRepo) CountDueCardsByKnowledgeIDs(ctx context.Context, knowledgeIDs []string) (map[string]int64, error) {
+	if len(knowledgeIDs) == 0 {
+		return map[string]int64{}, nil
+	}
+	now := time.Now()
+	var rows []struct {
+		KnowledgeID string `gorm:"column:knowledge_id"`
+		N           int64  `gorm:"column:n"`
+	}
+	err := r.db.WithContext(ctx).
+		Table("card_srs").
+		Select("card.knowledge_id as knowledge_id, count(*) as n").
+		Joins("JOIN card ON card.id = card_srs.card_id AND card.deleted_at IS NULL").
+		Where("card.knowledge_id IN ?", knowledgeIDs).
+		Where("card_srs.suspended = ?", false).
+		Where("card_srs.due_at <= ?", now).
+		Group("card.knowledge_id").
+		Scan(&rows).Error
+	if err != nil {
+		return nil, convertError(err)
+	}
+	out := make(map[string]int64, len(rows))
+	for _, row := range rows {
+		out[row.KnowledgeID] = row.N
+	}
+	return out, nil
 }
 
 func (r *srsRepo) GetStatistics(ctx context.Context, knowledgeID *string) (*SRSStatistics, error) {

@@ -51,19 +51,37 @@ func (d *Desktop) CreateKnowledge(req CreateKnowledgeRequest) (string, error) {
 }
 
 func (d *Desktop) GetKnowledge(id string) (*KnowledgeDTO, error) {
-	knowledgeModel, err := d.actions.Knowledge.Get(d.actionContext(), id)
+	ctx := d.actionContext()
+	knowledgeModel, err := d.actions.Knowledge.Get(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	return toKnowledgeDTO(knowledgeModel), nil
+	cc, dc, err := d.actions.Knowledge.CountMapsByKnowledgeIDs(ctx, []string{id})
+	if err != nil {
+		return nil, err
+	}
+	return knowledgeDTOFromModel(knowledgeModel, cc, dc), nil
 }
 
 func (d *Desktop) ListKnowledge(parentID *string) ([]*KnowledgeDTO, error) {
-	items, err := d.actions.Knowledge.List(d.actionContext(), parentID)
+	ctx := d.actionContext()
+	items, err := d.actions.Knowledge.List(ctx, parentID)
 	if err != nil {
 		return nil, err
 	}
-	return toKnowledgeDTOs(items), nil
+	ids := make([]string, len(items))
+	for i, it := range items {
+		ids[i] = it.ID
+	}
+	cc, dc, err := d.actions.Knowledge.CountMapsByKnowledgeIDs(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*KnowledgeDTO, 0, len(items))
+	for _, item := range items {
+		out = append(out, knowledgeDTOFromModel(item, cc, dc))
+	}
+	return out, nil
 }
 
 func (d *Desktop) GetKnowledgeTree(rootID *string) ([]*KnowledgeTreeNode, error) {
@@ -73,14 +91,28 @@ func (d *Desktop) GetKnowledgeTree(rootID *string) ([]*KnowledgeTreeNode, error)
 		if err != nil {
 			return nil, err
 		}
-		return []*KnowledgeTreeNode{toKnowledgeTreeNode(root)}, nil
+		var ids []string
+		appendKnowledgeSubtreeIDs(root, &ids)
+		cc, dc, err := d.actions.Knowledge.CountMapsByKnowledgeIDs(ctx, ids)
+		if err != nil {
+			return nil, err
+		}
+		return []*KnowledgeTreeNode{toKnowledgeTreeNode(root, cc, dc)}, nil
 	}
 
 	items, err := d.actions.Knowledge.ListAll(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return buildKnowledgeForest(items), nil
+	ids := make([]string, len(items))
+	for i, it := range items {
+		ids[i] = it.ID
+	}
+	cc, dc, err := d.actions.Knowledge.CountMapsByKnowledgeIDs(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	return buildKnowledgeForest(items, cc, dc), nil
 }
 
 func (d *Desktop) UpdateKnowledge(id string, req UpdateKnowledgeRequest) error {
@@ -118,48 +150,50 @@ func (d *Desktop) actionContext() context.Context {
 	return ctx
 }
 
-func toKnowledgeDTO(model *models.Knowledge) *KnowledgeDTO {
-	if model == nil {
+func knowledgeDTOFromModel(m *models.Knowledge, cardCounts, dueCounts map[string]int64) *KnowledgeDTO {
+	if m == nil {
 		return nil
 	}
 	return &KnowledgeDTO{
-		ID:          model.ID,
-		Name:        model.Name,
-		Description: model.Description,
-		ParentID:    model.ParentID,
-		CardCount:   0,
-		DueCount:    0,
-		CreatedAt:   model.CreatedAt,
-		UpdatedAt:   model.UpdatedAt,
-		ArchivedAt:  model.ArchivedAt,
+		ID:          m.ID,
+		Name:        m.Name,
+		Description: m.Description,
+		ParentID:    m.ParentID,
+		CardCount:   int(cardCounts[m.ID]),
+		DueCount:    int(dueCounts[m.ID]),
+		CreatedAt:   m.CreatedAt,
+		UpdatedAt:   m.UpdatedAt,
+		ArchivedAt:  m.ArchivedAt,
 	}
 }
 
-func toKnowledgeDTOs(items []*models.Knowledge) []*KnowledgeDTO {
-	result := make([]*KnowledgeDTO, 0, len(items))
-	for _, item := range items {
-		result = append(result, toKnowledgeDTO(item))
+func appendKnowledgeSubtreeIDs(k *models.Knowledge, dst *[]string) {
+	if k == nil {
+		return
 	}
-	return result
+	*dst = append(*dst, k.ID)
+	for i := range k.Children {
+		appendKnowledgeSubtreeIDs(&k.Children[i], dst)
+	}
 }
 
-func toKnowledgeTreeNode(model *models.Knowledge) *KnowledgeTreeNode {
+func toKnowledgeTreeNode(model *models.Knowledge, cardCounts, dueCounts map[string]int64) *KnowledgeTreeNode {
 	if model == nil {
 		return nil
 	}
-	node := &KnowledgeTreeNode{KnowledgeDTO: *toKnowledgeDTO(model)}
+	node := &KnowledgeTreeNode{KnowledgeDTO: *knowledgeDTOFromModel(model, cardCounts, dueCounts)}
 	for i := range model.Children {
 		child := model.Children[i]
-		node.Children = append(node.Children, toKnowledgeTreeNode(&child))
+		node.Children = append(node.Children, toKnowledgeTreeNode(&child, cardCounts, dueCounts))
 	}
 	return node
 }
 
-func buildKnowledgeForest(items []*models.Knowledge) []*KnowledgeTreeNode {
+func buildKnowledgeForest(items []*models.Knowledge, cardCounts, dueCounts map[string]int64) []*KnowledgeTreeNode {
 	nodes := make(map[string]*KnowledgeTreeNode, len(items))
 	roots := make([]*KnowledgeTreeNode, 0)
 	for _, item := range items {
-		nodes[item.ID] = &KnowledgeTreeNode{KnowledgeDTO: *toKnowledgeDTO(item)}
+		nodes[item.ID] = &KnowledgeTreeNode{KnowledgeDTO: *knowledgeDTOFromModel(item, cardCounts, dueCounts)}
 	}
 	for _, item := range items {
 		node := nodes[item.ID]

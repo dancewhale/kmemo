@@ -34,7 +34,11 @@ type Dependencies struct {
 
 func New(deps Dependencies) *Actions {
 	return &Actions{
-		Knowledge: knowledge.NewService(deps.Repositories.Knowledge()),
+		Knowledge: knowledge.NewService(knowledge.Dependencies{
+			Repo:  deps.Repositories.Knowledge(),
+			Cards: deps.Repositories.Card(),
+			SRS:   deps.Repositories.SRS(),
+		}),
 		Card: card.NewService(card.Dependencies{
 			Cards:        deps.Repositories.Card(),
 			Knowledge:    deps.Repositories.Knowledge(),

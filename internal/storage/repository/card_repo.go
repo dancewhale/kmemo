@@ -28,6 +28,9 @@ type CardRepository interface {
 	// List 列表查询
 	List(ctx context.Context, opts ListCardOptions) ([]*models.Card, int64, error)
 
+	// CountByKnowledgeIDs 按知识库统计未软删卡片数量（未出现在结果中的 knowledge_id 视为 0）
+	CountByKnowledgeIDs(ctx context.Context, knowledgeIDs []string) (map[string]int64, error)
+
 	// GetByKnowledge 获取指定知识库下的卡片
 	GetByKnowledge(ctx context.Context, knowledgeID string, opts ListCardOptions) ([]*models.Card, int64, error)
 
@@ -168,6 +171,30 @@ func (r *cardRepo) buildCardQuery(ctx context.Context, opts ListCardOptions) (da
 	}
 
 	return q, nil
+}
+
+func (r *cardRepo) CountByKnowledgeIDs(ctx context.Context, knowledgeIDs []string) (map[string]int64, error) {
+	if len(knowledgeIDs) == 0 {
+		return map[string]int64{}, nil
+	}
+	var rows []struct {
+		KnowledgeID string `gorm:"column:knowledge_id"`
+		N           int64  `gorm:"column:n"`
+	}
+	err := r.db.WithContext(ctx).
+		Model(&models.Card{}).
+		Select("knowledge_id, count(*) as n").
+		Where("knowledge_id IN ?", knowledgeIDs).
+		Group("knowledge_id").
+		Scan(&rows).Error
+	if err != nil {
+		return nil, convertError(err)
+	}
+	out := make(map[string]int64, len(rows))
+	for _, row := range rows {
+		out[row.KnowledgeID] = row.N
+	}
+	return out, nil
 }
 
 func (r *cardRepo) List(ctx context.Context, opts ListCardOptions) ([]*models.Card, int64, error) {

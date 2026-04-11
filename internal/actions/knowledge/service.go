@@ -10,13 +10,20 @@ import (
 	"kmemo/internal/storage/repository"
 )
 
-// Service handles knowledge-oriented user actions.
-type Service struct {
-	repo repository.KnowledgeRepository
+// Dependencies 聚合 knowledge 用例所需的仓储。
+type Dependencies struct {
+	Repo  repository.KnowledgeRepository
+	Cards repository.CardRepository
+	SRS   repository.SRSRepository
 }
 
-func NewService(repo repository.KnowledgeRepository) *Service {
-	return &Service{repo: repo}
+// Service handles knowledge-oriented user actions.
+type Service struct {
+	deps Dependencies
+}
+
+func NewService(deps Dependencies) *Service {
+	return &Service{deps: deps}
 }
 
 type CreateInput struct {
@@ -40,18 +47,18 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (string, error)
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
-	if err := s.repo.Create(ctx, knowledge); err != nil {
+	if err := s.deps.Repo.Create(ctx, knowledge); err != nil {
 		return "", err
 	}
 	return knowledge.ID, nil
 }
 
 func (s *Service) Get(ctx context.Context, id string) (*models.Knowledge, error) {
-	return s.repo.GetByID(ctx, id)
+	return s.deps.Repo.GetByID(ctx, id)
 }
 
 func (s *Service) List(ctx context.Context, parentID *string) ([]*models.Knowledge, error) {
-	list, _, err := s.repo.List(ctx, repository.ListKnowledgeOptions{ParentID: parentID})
+	list, _, err := s.deps.Repo.List(ctx, repository.ListKnowledgeOptions{ParentID: parentID})
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +66,7 @@ func (s *Service) List(ctx context.Context, parentID *string) ([]*models.Knowled
 }
 
 func (s *Service) ListAll(ctx context.Context) ([]*models.Knowledge, error) {
-	list, _, err := s.repo.List(ctx, repository.ListKnowledgeOptions{})
+	list, _, err := s.deps.Repo.List(ctx, repository.ListKnowledgeOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -67,31 +74,44 @@ func (s *Service) ListAll(ctx context.Context) ([]*models.Knowledge, error) {
 }
 
 func (s *Service) GetTree(ctx context.Context, rootID string) (*models.Knowledge, error) {
-	return s.repo.GetTree(ctx, rootID)
+	return s.deps.Repo.GetTree(ctx, rootID)
 }
 
 func (s *Service) Update(ctx context.Context, id string, input UpdateInput) error {
-	knowledge, err := s.repo.GetByID(ctx, id)
+	knowledge, err := s.deps.Repo.GetByID(ctx, id)
 	if err != nil {
 		return err
 	}
 	knowledge.Name = input.Name
 	knowledge.Description = input.Description
-	return s.repo.Update(ctx, knowledge)
+	return s.deps.Repo.Update(ctx, knowledge)
 }
 
 func (s *Service) Delete(ctx context.Context, id string) error {
-	return s.repo.Delete(ctx, id)
+	return s.deps.Repo.Delete(ctx, id)
 }
 
 func (s *Service) Move(ctx context.Context, id string, newParentID *string) error {
-	return s.repo.Move(ctx, id, newParentID)
+	return s.deps.Repo.Move(ctx, id, newParentID)
 }
 
 func (s *Service) Archive(ctx context.Context, id string) error {
-	return s.repo.Archive(ctx, id)
+	return s.deps.Repo.Archive(ctx, id)
 }
 
 func (s *Service) Unarchive(ctx context.Context, id string) error {
-	return s.repo.Unarchive(ctx, id)
+	return s.deps.Repo.Unarchive(ctx, id)
+}
+
+// CountMapsByKnowledgeIDs 批量返回各知识库下的卡片总数与「当前到期」卡片数（与 Card 列表 / GetDueCards 语义对齐）。
+func (s *Service) CountMapsByKnowledgeIDs(ctx context.Context, knowledgeIDs []string) (cardCounts map[string]int64, dueCounts map[string]int64, err error) {
+	cardCounts, err = s.deps.Cards.CountByKnowledgeIDs(ctx, knowledgeIDs)
+	if err != nil {
+		return nil, nil, err
+	}
+	dueCounts, err = s.deps.SRS.CountDueCardsByKnowledgeIDs(ctx, knowledgeIDs)
+	if err != nil {
+		return nil, nil, err
+	}
+	return cardCounts, dueCounts, nil
 }
