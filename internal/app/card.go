@@ -26,6 +26,22 @@ type CardDTO struct {
 	UpdatedAt        time.Time  `json:"updatedAt"`
 }
 
+type CardSummaryDTO struct {
+	ID        string    `json:"id"`
+	ParentID  *string   `json:"parentId"`
+	Title     string    `json:"title"`
+	CardType  string    `json:"cardType"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
+}
+
+type CardDetailDTO struct {
+	CardDTO
+	Parent   *CardSummaryDTO   `json:"parent"`
+	Children []*CardSummaryDTO `json:"children"`
+}
+
 type CardFilters struct {
 	KnowledgeID *string  `json:"knowledgeId"`
 	CardType    string   `json:"cardType"`
@@ -81,6 +97,39 @@ func (d *Desktop) GetCard(id string) (*CardDTO, error) {
 	return dto, nil
 }
 
+func (d *Desktop) GetCardDetail(id string) (*CardDetailDTO, error) {
+	out, err := d.actions.Card.Get(d.actionContext(), id)
+	if err != nil {
+		return nil, err
+	}
+	tags, err := d.actions.Card.GetTags(d.actionContext(), id)
+	if err != nil {
+		return nil, err
+	}
+	detail := &CardDetailDTO{CardDTO: *toCardDTO(out.Card, tags)}
+	detail.HTMLContent = out.HTMLContent
+
+	if out.Card.ParentID != nil {
+		parent, err := d.actions.Card.Get(d.actionContext(), *out.Card.ParentID)
+		if err != nil {
+			return nil, err
+		}
+		detail.Parent = toCardSummaryDTO(parent.Card)
+	}
+
+	children, _, err := d.actions.Card.List(d.actionContext(), repository.ListCardOptions{
+		ParentID:  &id,
+		Preload:   []string{"Knowledge", "SRS"},
+		OrderBy:   "sort_order",
+		OrderDesc: false,
+	})
+	if err != nil {
+		return nil, err
+	}
+	detail.Children = toCardSummaryDTOs(children)
+	return detail, nil
+}
+
 func (d *Desktop) ListCards(filters CardFilters) ([]*CardDTO, int64, error) {
 	items, total, err := d.actions.Card.List(d.actionContext(), repository.ListCardOptions{
 		KnowledgeID: filters.KnowledgeID,
@@ -105,6 +154,24 @@ func (d *Desktop) ListCards(filters CardFilters) ([]*CardDTO, int64, error) {
 		result = append(result, toCardDTO(item, tags))
 	}
 	return result, total, nil
+}
+
+func (d *Desktop) GetCardChildren(parentID string) ([]*CardDTO, error) {
+	items, _, err := d.actions.Card.List(d.actionContext(), repository.ListCardOptions{
+		ParentID:  &parentID,
+		Preload:   []string{"SRS", "Knowledge"},
+		OrderBy:   "sort_order",
+		OrderDesc: false,
+	})
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*CardDTO, 0, len(items))
+	for _, item := range items {
+		tags, _ := d.actions.Card.GetTags(d.actionContext(), item.ID)
+		result = append(result, toCardDTO(item, tags))
+	}
+	return result, nil
 }
 
 func (d *Desktop) UpdateCard(id string, req UpdateCardRequest) error {
@@ -172,4 +239,27 @@ func toCardDTO(model *models.Card, tags []*models.Tag) *CardDTO {
 		dto.Tags = toTagDTOs(tags)
 	}
 	return dto
+}
+
+func toCardSummaryDTO(model *models.Card) *CardSummaryDTO {
+	if model == nil {
+		return nil
+	}
+	return &CardSummaryDTO{
+		ID:        model.ID,
+		ParentID:  model.ParentID,
+		Title:     model.Title,
+		CardType:  model.CardType,
+		Status:    model.Status,
+		CreatedAt: model.CreatedAt,
+		UpdatedAt: model.UpdatedAt,
+	}
+}
+
+func toCardSummaryDTOs(items []*models.Card) []*CardSummaryDTO {
+	result := make([]*CardSummaryDTO, 0, len(items))
+	for _, item := range items {
+		result = append(result, toCardSummaryDTO(item))
+	}
+	return result
 }
