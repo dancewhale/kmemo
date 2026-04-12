@@ -1,7 +1,8 @@
 import { defineConfig } from "vite";
+import vue from "@vitejs/plugin-vue";
 
-// Minimal Vite setup for Wails dev/build. Port is a sane default; Wails can override via devServerUrl.
 export default defineConfig({
+  plugins: [vue()],
   server: {
     port: 9245,
     strictPort: true,
