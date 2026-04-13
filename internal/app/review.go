@@ -47,7 +47,8 @@ type ReviewLogDTO struct {
 }
 
 func (d *Desktop) GetDueCards(knowledgeID *string, limit int) ([]*CardWithSRSDTO, error) {
-	items, err := d.actions.Review.GetDueCards(d.actionContext(), knowledgeID, limit)
+	ctx := d.actionContext()
+	items, err := d.actions.Review.GetDueCards(ctx, knowledgeID, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -59,15 +60,18 @@ func (d *Desktop) GetDueCards(knowledgeID *string, limit int) ([]*CardWithSRSDTO
 }
 
 func (d *Desktop) SubmitReview(req ReviewRequest) error {
-	return d.actions.Review.Submit(d.actionContext(), review.SubmitInput{CardID: req.CardID, Rating: req.Rating})
+	ctx := d.actionContext()
+	return d.actions.Review.Submit(ctx, review.SubmitInput{CardID: req.CardID, Rating: req.Rating})
 }
 
 func (d *Desktop) UndoLastReview(cardID string) error {
-	return d.actions.Review.UndoLastReview(d.actionContext(), cardID)
+	ctx := d.actionContext()
+	return d.actions.Review.UndoLastReview(ctx, cardID)
 }
 
 func (d *Desktop) GetSRSStatistics(knowledgeID *string) (*SRSStatisticsDTO, error) {
-	stats, err := d.actions.Review.GetStatistics(d.actionContext(), knowledgeID)
+	ctx := d.actionContext()
+	stats, err := d.actions.Review.GetStatistics(ctx, knowledgeID)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +86,8 @@ func (d *Desktop) GetSRSStatistics(knowledgeID *string) (*SRSStatisticsDTO, erro
 }
 
 func (d *Desktop) GetReviewHistory(cardID string, limit int) ([]*ReviewLogDTO, error) {
-	items, err := d.actions.Review.GetHistory(d.actionContext(), cardID, limit)
+	ctx := d.actionContext()
+	items, err := d.actions.Review.GetHistory(ctx, cardID, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +99,8 @@ func (d *Desktop) GetReviewHistory(cardID string, limit int) ([]*ReviewLogDTO, e
 }
 
 func (d *Desktop) GetReviewStats(startDate, endDate time.Time) (*repository.ReviewStatistics, error) {
-	return d.actions.Review.GetStatsByDate(d.actionContext(), startDate, endDate)
+	ctx := d.actionContext()
+	return d.actions.Review.GetStatsByDate(ctx, startDate, endDate)
 }
 
 func toSRSDTO(model *models.CardSRS) *SRSDTO {

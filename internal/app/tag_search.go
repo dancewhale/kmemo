@@ -40,16 +40,18 @@ func (d *Desktop) CreateTag(req CreateTagRequest) (string, error) {
 	if strings.TrimSpace(req.Name) == "" || strings.TrimSpace(req.Slug) == "" {
 		return "", repository.ErrInvalidInput
 	}
+	ctx := d.actionContext()
 	now := time.Now().UTC()
 	tag := &models.Tag{ID: uuid.NewString(), Name: strings.TrimSpace(req.Name), Slug: strings.TrimSpace(req.Slug), Color: req.Color, Icon: req.Icon, Description: req.Description, CreatedAt: now, UpdatedAt: now}
-	if err := d.actions.Tag.Create(d.actionContext(), tag); err != nil {
+	if err := d.actions.Tag.Create(ctx, tag); err != nil {
 		return "", err
 	}
 	return tag.ID, nil
 }
 
 func (d *Desktop) GetTag(id string) (*TagDTO, error) {
-	tag, err := d.actions.Tag.Get(d.actionContext(), id)
+	ctx := d.actionContext()
+	tag, err := d.actions.Tag.Get(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +59,8 @@ func (d *Desktop) GetTag(id string) (*TagDTO, error) {
 }
 
 func (d *Desktop) ListTags() ([]*TagDTO, error) {
-	items, err := d.actions.Tag.List(d.actionContext())
+	ctx := d.actionContext()
+	items, err := d.actions.Tag.List(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -65,15 +68,18 @@ func (d *Desktop) ListTags() ([]*TagDTO, error) {
 }
 
 func (d *Desktop) UpdateTag(id string, req UpdateTagRequest) error {
-	return d.actions.Tag.Update(d.actionContext(), &models.Tag{ID: id, Name: strings.TrimSpace(req.Name), Color: req.Color, Icon: req.Icon, Description: req.Description})
+	ctx := d.actionContext()
+	return d.actions.Tag.Update(ctx, &models.Tag{ID: id, Name: strings.TrimSpace(req.Name), Color: req.Color, Icon: req.Icon, Description: req.Description})
 }
 
 func (d *Desktop) DeleteTag(id string) error {
-	return d.actions.Tag.Delete(d.actionContext(), id)
+	ctx := d.actionContext()
+	return d.actions.Tag.Delete(ctx, id)
 }
 
 func (d *Desktop) SearchCardsByTags(tagIDs []string) ([]*CardDTO, error) {
-	items, err := d.actions.Search.SearchCardsByTags(d.actionContext(), tagIDs)
+	ctx := d.actionContext()
+	items, err := d.actions.Search.SearchCardsByTags(ctx, tagIDs)
 	if err != nil {
 		return nil, err
 	}

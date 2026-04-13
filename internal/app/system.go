@@ -22,7 +22,8 @@ type UpdateDefaultFSRSParameterRequest struct {
 }
 
 func (d *Desktop) ListFSRSParameters() ([]*FSRSParameterDTO, error) {
-	items, err := d.actions.FSRSParameters.List(d.actionContext())
+	ctx := d.actionContext()
+	items, err := d.actions.FSRSParameters.List(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +31,8 @@ func (d *Desktop) ListFSRSParameters() ([]*FSRSParameterDTO, error) {
 }
 
 func (d *Desktop) GetDefaultFSRSParameter() (*FSRSParameterDTO, error) {
-	item, err := d.actions.FSRSParameters.GetDefault(d.actionContext())
+	ctx := d.actionContext()
+	item, err := d.actions.FSRSParameters.GetDefault(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +43,8 @@ func (d *Desktop) UpdateDefaultFSRSParameter(req UpdateDefaultFSRSParameterReque
 	if strings.TrimSpace(req.ParametersJSON) == "" {
 		return nil, repository.ErrInvalidInput
 	}
-	item, err := d.actions.FSRSParameters.UpdateDefault(d.actionContext(), &models.FSRSParameter{
+	ctx := d.actionContext()
+	item, err := d.actions.FSRSParameters.UpdateDefault(ctx, &models.FSRSParameter{
 		ParametersJSON:   req.ParametersJSON,
 		DesiredRetention: req.DesiredRetention,
 		MaximumInterval:  req.MaximumInterval,

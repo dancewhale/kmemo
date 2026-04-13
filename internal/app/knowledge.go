@@ -1,14 +1,12 @@
 package app
 
 import (
-	"context"
 	"strings"
 	"time"
 
 	"kmemo/internal/actions/knowledge"
 	"kmemo/internal/storage/models"
 	"kmemo/internal/storage/repository"
-	"kmemo/internal/zaplog"
 )
 
 type KnowledgeDTO struct {
@@ -43,7 +41,8 @@ func (d *Desktop) CreateKnowledge(req CreateKnowledgeRequest) (string, error) {
 	if strings.TrimSpace(req.Name) == "" {
 		return "", repository.ErrInvalidInput
 	}
-	return d.actions.Knowledge.Create(d.actionContext(), knowledge.CreateInput{
+	ctx := d.actionContext()
+	return d.actions.Knowledge.Create(ctx, knowledge.CreateInput{
 		Name:        strings.TrimSpace(req.Name),
 		Description: strings.TrimSpace(req.Description),
 		ParentID:    req.ParentID,
@@ -119,36 +118,37 @@ func (d *Desktop) UpdateKnowledge(id string, req UpdateKnowledgeRequest) error {
 	if strings.TrimSpace(req.Name) == "" {
 		return repository.ErrInvalidInput
 	}
-	return d.actions.Knowledge.Update(d.actionContext(), id, knowledge.UpdateInput{
+	ctx := d.actionContext()
+	return d.actions.Knowledge.Update(ctx, id, knowledge.UpdateInput{
 		Name:        strings.TrimSpace(req.Name),
 		Description: strings.TrimSpace(req.Description),
 	})
 }
 
 func (d *Desktop) DeleteKnowledge(id string) error {
-	return d.actions.Knowledge.Delete(d.actionContext(), id)
+	ctx := d.actionContext()
+	return d.actions.Knowledge.Delete(ctx, id)
 }
 
 func (d *Desktop) MoveKnowledge(id string, newParentID *string) error {
 	if newParentID != nil && *newParentID == id {
 		return repository.ErrInvalidInput
 	}
-	return d.actions.Knowledge.Move(d.actionContext(), id, newParentID)
+	ctx := d.actionContext()
+	return d.actions.Knowledge.Move(ctx, id, newParentID)
 }
 
 func (d *Desktop) ArchiveKnowledge(id string) error {
-	return d.actions.Knowledge.Archive(d.actionContext(), id)
+	ctx := d.actionContext()
+	return d.actions.Knowledge.Archive(ctx, id)
 }
 
 func (d *Desktop) UnarchiveKnowledge(id string) error {
-	return d.actions.Knowledge.Unarchive(d.actionContext(), id)
+	ctx := d.actionContext()
+	return d.actions.Knowledge.Unarchive(ctx, id)
 }
 
-func (d *Desktop) actionContext() context.Context {
-	ctx := zaplog.WithLogger(context.Background(), d.logger)
-	ctx = zaplog.WithRequestID(ctx, zaplog.NewRequestID())
-	return ctx
-}
+
 
 func knowledgeDTOFromModel(m *models.Knowledge, cardCounts, dueCounts map[string]int64) *KnowledgeDTO {
 	if m == nil {

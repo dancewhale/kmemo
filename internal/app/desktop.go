@@ -47,8 +47,16 @@ func (d *Desktop) PythonEndpoint() string {
 	return d.cfg.PythonGRPCAddr
 }
 
+func (d *Desktop) actionContext() context.Context {
+	ctx := zaplog.WithLogger(context.Background(), d.logger)
+	ctx = zaplog.WithRequestID(ctx, zaplog.NewRequestID())
+	return ctx
+}
+
 // GetSourceProcessCapabilities returns worker-advertised source-process capabilities.
 func (d *Desktop) GetSourceProcessCapabilities(ctx context.Context) (*sourceprocess.Capabilities, error) {
+	ctx = zaplog.WithLogger(ctx, d.logger)
+	ctx, _ = zaplog.EnsureRequestID(ctx)
 	return d.sourceProcess.GetCapabilities(ctx)
 }
 

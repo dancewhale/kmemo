@@ -76,7 +76,8 @@ func (d *Desktop) CreateCard(req CreateCardRequest) (string, error) {
 	if strings.TrimSpace(req.KnowledgeID) == "" || strings.TrimSpace(req.Title) == "" || strings.TrimSpace(req.CardType) == "" {
 		return "", repository.ErrInvalidInput
 	}
-	return d.actions.Card.Create(d.actionContext(), card.CreateInput{
+	ctx := d.actionContext()
+	return d.actions.Card.Create(ctx, card.CreateInput{
 		KnowledgeID:      strings.TrimSpace(req.KnowledgeID),
 		SourceDocumentID: req.SourceDocumentID,
 		ParentID:         req.ParentID,
@@ -88,7 +89,8 @@ func (d *Desktop) CreateCard(req CreateCardRequest) (string, error) {
 }
 
 func (d *Desktop) GetCard(id string) (*CardDTO, error) {
-	out, err := d.actions.Card.Get(d.actionContext(), id)
+	ctx := d.actionContext()
+	out, err := d.actions.Card.Get(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -98,11 +100,12 @@ func (d *Desktop) GetCard(id string) (*CardDTO, error) {
 }
 
 func (d *Desktop) GetCardDetail(id string) (*CardDetailDTO, error) {
-	out, err := d.actions.Card.Get(d.actionContext(), id)
+	ctx := d.actionContext()
+	out, err := d.actions.Card.Get(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	tags, err := d.actions.Card.GetTags(d.actionContext(), id)
+	tags, err := d.actions.Card.GetTags(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -110,14 +113,14 @@ func (d *Desktop) GetCardDetail(id string) (*CardDetailDTO, error) {
 	detail.HTMLContent = out.HTMLContent
 
 	if out.Card.ParentID != nil {
-		parent, err := d.actions.Card.Get(d.actionContext(), *out.Card.ParentID)
+		parent, err := d.actions.Card.Get(ctx, *out.Card.ParentID)
 		if err != nil {
 			return nil, err
 		}
 		detail.Parent = toCardSummaryDTO(parent.Card)
 	}
 
-	children, _, err := d.actions.Card.List(d.actionContext(), repository.ListCardOptions{
+	children, _, err := d.actions.Card.List(ctx, repository.ListCardOptions{
 		ParentID:  &id,
 		Preload:   []string{"Knowledge", "SRS"},
 		OrderBy:   "sort_order",
@@ -131,7 +134,8 @@ func (d *Desktop) GetCardDetail(id string) (*CardDetailDTO, error) {
 }
 
 func (d *Desktop) ListCards(filters CardFilters) ([]*CardDTO, int64, error) {
-	items, total, err := d.actions.Card.List(d.actionContext(), repository.ListCardOptions{
+	ctx := d.actionContext()
+	items, total, err := d.actions.Card.List(ctx, repository.ListCardOptions{
 		KnowledgeID: filters.KnowledgeID,
 		ParentID:    filters.ParentID,
 		CardType:    filters.CardType,
@@ -150,14 +154,15 @@ func (d *Desktop) ListCards(filters CardFilters) ([]*CardDTO, int64, error) {
 	}
 	result := make([]*CardDTO, 0, len(items))
 	for _, item := range items {
-		tags, _ := d.actions.Card.GetTags(d.actionContext(), item.ID)
+		tags, _ := d.actions.Card.GetTags(ctx, item.ID)
 		result = append(result, toCardDTO(item, tags))
 	}
 	return result, total, nil
 }
 
 func (d *Desktop) GetCardChildren(parentID string) ([]*CardDTO, error) {
-	items, _, err := d.actions.Card.List(d.actionContext(), repository.ListCardOptions{
+	ctx := d.actionContext()
+	items, _, err := d.actions.Card.List(ctx, repository.ListCardOptions{
 		ParentID:  &parentID,
 		Preload:   []string{"SRS", "Knowledge"},
 		OrderBy:   "sort_order",
@@ -168,7 +173,7 @@ func (d *Desktop) GetCardChildren(parentID string) ([]*CardDTO, error) {
 	}
 	result := make([]*CardDTO, 0, len(items))
 	for _, item := range items {
-		tags, _ := d.actions.Card.GetTags(d.actionContext(), item.ID)
+		tags, _ := d.actions.Card.GetTags(ctx, item.ID)
 		result = append(result, toCardDTO(item, tags))
 	}
 	return result, nil
@@ -178,7 +183,8 @@ func (d *Desktop) UpdateCard(id string, req UpdateCardRequest) error {
 	if strings.TrimSpace(req.Title) == "" {
 		return repository.ErrInvalidInput
 	}
-	return d.actions.Card.Update(d.actionContext(), id, card.UpdateInput{
+	ctx := d.actionContext()
+	return d.actions.Card.Update(ctx, id, card.UpdateInput{
 		Title:       strings.TrimSpace(req.Title),
 		HTMLContent: req.HTMLContent,
 		Status:      strings.TrimSpace(req.Status),
@@ -186,19 +192,23 @@ func (d *Desktop) UpdateCard(id string, req UpdateCardRequest) error {
 }
 
 func (d *Desktop) DeleteCard(id string) error {
-	return d.actions.Card.Delete(d.actionContext(), id)
+	ctx := d.actionContext()
+	return d.actions.Card.Delete(ctx, id)
 }
 
 func (d *Desktop) AddCardTags(cardID string, tagIDs []string) error {
-	return d.actions.Card.AddTags(d.actionContext(), cardID, tagIDs)
+	ctx := d.actionContext()
+	return d.actions.Card.AddTags(ctx, cardID, tagIDs)
 }
 
 func (d *Desktop) RemoveCardTags(cardID string, tagIDs []string) error {
-	return d.actions.Card.RemoveTags(d.actionContext(), cardID, tagIDs)
+	ctx := d.actionContext()
+	return d.actions.Card.RemoveTags(ctx, cardID, tagIDs)
 }
 
 func (d *Desktop) GetCardTags(cardID string) ([]*TagDTO, error) {
-	items, err := d.actions.Card.GetTags(d.actionContext(), cardID)
+	ctx := d.actionContext()
+	items, err := d.actions.Card.GetTags(ctx, cardID)
 	if err != nil {
 		return nil, err
 	}
@@ -206,11 +216,13 @@ func (d *Desktop) GetCardTags(cardID string) ([]*TagDTO, error) {
 }
 
 func (d *Desktop) SuspendCard(cardID string) error {
-	return d.actions.Card.Suspend(d.actionContext(), cardID)
+	ctx := d.actionContext()
+	return d.actions.Card.Suspend(ctx, cardID)
 }
 
 func (d *Desktop) ResumeCard(cardID string) error {
-	return d.actions.Card.Resume(d.actionContext(), cardID)
+	ctx := d.actionContext()
+	return d.actions.Card.Resume(ctx, cardID)
 }
 
 func toCardDTO(model *models.Card, tags []*models.Tag) *CardDTO {
