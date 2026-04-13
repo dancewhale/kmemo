@@ -92,6 +92,8 @@ tasks:
         fi
         cd "$ROOT/python"
         export KMEMO_LOG_LEVEL=debug
+        export KMEMO_PY_LOG_FILE_ENABLED=1
+        export KMEMO_PY_LOG_FILE=kmemo-python.log
         "$PY" -m app.server &
         PY_PID=$!
         cleanup() {
@@ -131,6 +133,7 @@ tasks:
         export KMEMO_SKIP_PYTHON=0
         export KMEMO_LOG_LEVEL=debug
         export KMEMO_REPOSITORY_DEBUG=1
+        export KMEMO_LOG_FILE_ENABLED=1
         wails dev
         STATUS=$?
         cleanup

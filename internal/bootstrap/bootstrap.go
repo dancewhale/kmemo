@@ -45,7 +45,11 @@ func NewHeadless(ctx context.Context) (*Headless, error) {
 	if err != nil {
 		return nil, fmt.Errorf("load config: %w", err)
 	}
-	logger, err := zaplog.New(cfg.LogLevel)
+	logFile := ""
+	if cfg.LogFileEnabled {
+		logFile = filepath.Join(cfg.LogsDir, cfg.LogFileName)
+	}
+	logger, err := zaplog.NewForHost(cfg.LogLevel, cfg.LogFileEnabled, logFile)
 	if err != nil {
 		return nil, fmt.Errorf("create logger: %w", err)
 	}
@@ -59,6 +63,8 @@ func NewHeadless(ctx context.Context) (*Headless, error) {
 		zap.Bool("skip_python", cfg.SkipPython),
 		zap.Duration("dial_timeout", cfg.DialTimeout),
 		zap.String("log_level", cfg.LogLevel),
+		zap.Bool("log_file_enabled", cfg.LogFileEnabled),
+		zap.String("log_file", logFile),
 		zap.Bool("repository_debug", cfg.RepositoryDebug),
 		zap.Duration("db_slow_threshold", cfg.DBSlowThreshold),
 	)

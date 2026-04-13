@@ -36,6 +36,22 @@ def _stdlib_log_level() -> int:
     }.get(v, logging.INFO)
 
 
+def _python_log_file_path() -> str | None:
+    """Resolve dedicated Python worker log file path under KMEMO_LOGS_DIR."""
+    enabled = os.environ.get("KMEMO_PY_LOG_FILE_ENABLED")
+    if enabled is None:
+        enabled = os.environ.get("KMEMO_LOG_FILE_ENABLED", "0")
+    enabled = enabled.strip().lower() in {"1", "true"}
+    if not enabled:
+        return None
+
+    logs_dir = os.environ.get("KMEMO_LOGS_DIR", "").strip()
+    if not logs_dir:
+        return None
+    filename = os.environ.get("KMEMO_PY_LOG_FILE", "kmemo-python.log").strip() or "kmemo-python.log"
+    return str(Path(logs_dir) / filename)
+
+
 class KmemoProcessor(kmemo_pb2_grpc.KmemoProcessorServicer):
     """Thin dispatcher; logic stays in app.services.* (placeholders for now)."""
 
@@ -118,7 +134,7 @@ class KmemoProcessor(kmemo_pb2_grpc.KmemoProcessorServicer):
 
 
 def serve(address: str = "[::]:50051") -> None:
-    configure_logging(_stdlib_log_level())
+    configure_logging(_stdlib_log_level(), _python_log_file_path())
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=4))
     kmemo_pb2_grpc.add_KmemoProcessorServicer_to_server(KmemoProcessor(), server)
     server.add_insecure_port(address)

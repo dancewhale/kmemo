@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import logging
+import os
 import sys
+from pathlib import Path
 
 import structlog
 
 
-def configure_logging(level: int = logging.INFO) -> None:
+def configure_logging(level: int = logging.INFO, log_file_path: str | None = None) -> None:
     timestamper = structlog.processors.TimeStamper(fmt="iso", key="ts")
 
     structlog.configure(
@@ -24,14 +26,21 @@ def configure_logging(level: int = logging.INFO) -> None:
         cache_logger_on_first_use=True,
     )
 
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setLevel(level)
-    handler.setFormatter(logging.Formatter("%(message)s"))
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(level)
+    console_handler.setFormatter(logging.Formatter("%(message)s"))
 
     root = logging.getLogger()
     root.handlers.clear()
     root.setLevel(level)
-    root.addHandler(handler)
+    root.addHandler(console_handler)
+
+    if log_file_path:
+        Path(os.path.dirname(log_file_path)).mkdir(parents=True, exist_ok=True)
+        file_handler = logging.FileHandler(log_file_path, encoding="utf-8")
+        file_handler.setLevel(level)
+        file_handler.setFormatter(logging.Formatter("%(message)s"))
+        root.addHandler(file_handler)
 
 
 def get_logger(name: str):

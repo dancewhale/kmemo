@@ -7,6 +7,7 @@ func configEnvMap(getenv func(string) string) map[string]string {
 		"KMEMO_PYTHON_GRPC",
 		"KMEMO_SKIP_PYTHON",
 		"KMEMO_LOG_LEVEL",
+		"KMEMO_LOG_FILE_ENABLED",
 		"KMEMO_REPOSITORY_DEBUG",
 		"KMEMO_DB_SLOW_THRESHOLD_MS",
 		"KMEMO_DB_PATH",
@@ -30,6 +31,9 @@ func applyEnvOverrides(raw *rawConfig, env map[string]string) {
 	}
 	if value := env["KMEMO_LOG_LEVEL"]; value != "" {
 		raw.Logging.Level = value
+	}
+	if value := env["KMEMO_LOG_FILE_ENABLED"]; value != "" {
+		raw.Logging.FileEnabled = parseEnvBool(value)
 	}
 	if value := env["KMEMO_REPOSITORY_DEBUG"]; value != "" {
 		raw.Database.RepositoryDebug = parseEnvBool(value)
