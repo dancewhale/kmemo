@@ -61,7 +61,11 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (string, error)
 		return "", err
 	}
 
-	id := uuid.NewString()
+	uid, genErr := uuid.NewV7()
+	if genErr != nil {
+		return "", genErr
+	}
+	id := uid.String()
 	now := time.Now().UTC()
 	slug := file.NormalizeSlug(input.Title)
 	htmlHash := hashContent(input.HTMLContent)

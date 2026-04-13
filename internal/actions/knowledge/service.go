@@ -38,9 +38,14 @@ type UpdateInput struct {
 }
 
 func (s *Service) Create(ctx context.Context, input CreateInput) (string, error) {
+    uid, genErr := uuid.NewV7()
+    if genErr != nil {
+            return "", genErr
+    }
+    id := uid.String()
 	now := time.Now().UTC()
 	knowledge := &models.Knowledge{
-		ID:          uuid.NewString(),
+		ID:          id,
 		Name:        input.Name,
 		Description: input.Description,
 		ParentID:    input.ParentID,

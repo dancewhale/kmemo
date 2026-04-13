@@ -5,5 +5,10 @@ import "github.com/google/uuid"
 const MetadataRequestIDKey = "x-request-id"
 
 func NewRequestID() string {
-	return uuid.NewString()
+    uid, genErr := uuid.NewV7()
+    if genErr != nil {
+            return ""
+    }
+    id := uid.String()
+	return id
 }
