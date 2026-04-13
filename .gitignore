@@ -22,6 +22,7 @@ desktop/frontend/node_modules/
 
 # Vite 构建产物（wails build / npm run build；带 hash 的 assets 等）
 desktop/frontend/dist/
+desktop/frontend/dist/*
 
 # Wails 生成的 JS/TS 绑定与 runtime（wails dev / wails build 会重写）
 desktop/frontend/wailsjs/
