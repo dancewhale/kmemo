@@ -5,7 +5,8 @@ export interface KnowledgeTreeNode {
   parentId?: string | null;
   cardCount: number;
   dueCount: number;
-  children: KnowledgeTreeNode[];
+  /** 后端可能序列化为 null，与「无子节点」同义 */
+  children: KnowledgeTreeNode[] | null;
 }
 
 export interface TagDTO {

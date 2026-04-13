@@ -18,7 +18,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
       const node = stack.shift();
       if (!node) continue;
       if (node.id === selectedKnowledgeId.value) return node;
-      stack.push(...node.children);
+      stack.push(...(node.children ?? []));
     }
     return null;
   });

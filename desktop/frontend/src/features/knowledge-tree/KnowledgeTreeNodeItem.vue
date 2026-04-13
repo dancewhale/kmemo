@@ -9,9 +9,9 @@
       <span class="tree-node-main">{{ node.name }}</span>
       <span class="tree-node-meta">{{ node.cardCount }}</span>
     </button>
-    <ul v-if="node.children.length > 0" class="tree-children">
+    <ul v-if="(node.children ?? []).length > 0" class="tree-children">
       <KnowledgeTreeNodeItem
-        v-for="child in node.children"
+        v-for="child in node.children ?? []"
         :key="child.id"
         :node="child"
         :selected-id="selectedId"
