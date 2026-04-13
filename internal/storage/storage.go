@@ -32,6 +32,10 @@ func New(opts Options, withMigrate bool) (*Storage, error) {
 			_ = s.Close()
 			return nil, err
 		}
+		if err := SeedDefaultData(db); err != nil {
+			_ = s.Close()
+			return nil, err
+		}
 	}
 	s.initDAO()
 	return s, nil
@@ -47,9 +51,12 @@ func (s *Storage) DB() *gorm.DB {
 	return s.db
 }
 
-// AutoMigrate 对 schema 做增量迁移。
+// AutoMigrate 对 schema 做增量迁移，并在仍无任何知识库时写入默认知识库（与 SeedDefaultData 幂等）。
 func (s *Storage) AutoMigrate() error {
-	return AutoMigrate(s.db)
+	if err := AutoMigrate(s.db); err != nil {
+		return err
+	}
+	return SeedDefaultData(s.db)
 }
 
 func (s *Storage) initDAO() {
