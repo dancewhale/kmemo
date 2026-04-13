@@ -81,11 +81,7 @@ func (l *GormLogger) Trace(ctx context.Context, begin time.Time, fc func() (stri
 
 	elapsed := time.Since(begin)
 	logger := FromContext(ctx).Named("gorm")
-	requestID, hasRequestID := RequestIDFromContext(ctx)
 	fields := []zap.Field{zap.Duration("duration", elapsed)}
-	if hasRequestID {
-		fields = append(fields, zap.String("request_id", requestID))
-	}
 
 	logSQL := l.debug || err != nil || (l.slowThreshold > 0 && elapsed > l.slowThreshold)
 	if logSQL {

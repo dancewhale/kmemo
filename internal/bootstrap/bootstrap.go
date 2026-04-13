@@ -56,7 +56,7 @@ func NewHeadless(ctx context.Context) (*Headless, error) {
 
 	ctx = zaplog.WithLogger(ctx, logger)
 	ctx, requestID := zaplog.EnsureRequestID(ctx)
-	logger = zaplog.FromContext(ctx).Named("bootstrap")
+	logger = logger.Named("bootstrap")
 	logger.Info("bootstrap config loaded",
 		zap.String("request_id", requestID),
 		zap.String("python_grpc", cfg.PythonGRPCAddr),
