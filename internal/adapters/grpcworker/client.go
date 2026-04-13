@@ -26,28 +26,28 @@ type Client struct {
 
 // New dials the Python worker. Close when shutting down the host.
 func New(ctx context.Context, cfg config.Config) (*Client, error) {
-	ctx = zaplog.WithLogger(ctx, zaplog.FromContext(ctx).Named("grpcworker"))
+	baseLogger := zaplog.LoggerNamed(ctx, "grpcworker")
+	ctx = zaplog.WithLogger(ctx, baseLogger)
 	ctx, _ = zaplog.EnsureRequestID(ctx)
-	logger := zaplog.FromContext(ctx)
 
-	logger.Info("grpc worker dial started", zap.String("target", cfg.PythonGRPCAddr))
+	zaplog.L(ctx).Info("grpc worker dial started", zap.String("target", cfg.PythonGRPCAddr))
 
 	ctx, cancel := context.WithTimeout(ctx, cfg.DialTimeout)
 	defer cancel()
 
 	conn, err := grpc.DialContext(ctx, cfg.PythonGRPCAddr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithUnaryInterceptor(zaplog.UnaryClientInterceptor(logger)),
+		grpc.WithUnaryInterceptor(zaplog.UnaryClientInterceptor(baseLogger)),
 	)
 	if err != nil {
-		logger.Error("grpc worker dial failed", zap.Error(err), zap.String("target", cfg.PythonGRPCAddr))
+		zaplog.L(ctx).Error("grpc worker dial failed", zap.Error(err), zap.String("target", cfg.PythonGRPCAddr))
 		return nil, fmt.Errorf("dial python grpc: %w", err)
 	}
-	logger.Info("grpc worker connected", zap.String("target", cfg.PythonGRPCAddr))
+	zaplog.L(ctx).Info("grpc worker connected", zap.String("target", cfg.PythonGRPCAddr))
 	return &Client{
 		conn:   conn,
 		api:    kmemov1.NewKmemoProcessorClient(conn),
-		logger: logger,
+		logger: baseLogger,
 		target: cfg.PythonGRPCAddr,
 	}, nil
 }

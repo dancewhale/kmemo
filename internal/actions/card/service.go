@@ -9,12 +9,14 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 
 	"kmemo/internal/contracts"
 	"kmemo/internal/file"
 	"kmemo/internal/storage/models"
 	"kmemo/internal/storage/repository"
+	"kmemo/internal/zaplog"
 )
 
 type Dependencies struct {
@@ -57,12 +59,22 @@ type GetOutput struct {
 }
 
 func (s *Service) Create(ctx context.Context, input CreateInput) (string, error) {
+	started := time.Now()
+	log := zaplog.L(ctx).Named("card")
+	log.Debug("card.create.start",
+		zap.String("knowledge_id", input.KnowledgeID),
+		zap.String("card_type", input.CardType),
+		zap.Int("tag_count", len(input.TagIDs)),
+	)
+
 	if _, err := s.deps.Knowledge.GetByID(ctx, input.KnowledgeID); err != nil {
+		log.Debug("card.create.fail", zap.String("phase", "knowledge"), zap.Error(err))
 		return "", err
 	}
 
 	uid, genErr := uuid.NewV7()
 	if genErr != nil {
+		log.Debug("card.create.fail", zap.String("phase", "id"), zap.Error(genErr))
 		return "", genErr
 	}
 	id := uid.String()
@@ -81,6 +93,7 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (string, error)
 			Data: []byte(input.HTMLContent),
 		})
 		if err != nil {
+			log.Debug("card.create.fail", zap.String("phase", "file_create"), zap.Error(err))
 			return "", err
 		}
 		path = loc.Path
@@ -108,6 +121,7 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (string, error)
 			if fileCreated && s.deps.FileStore != nil {
 				_ = s.deps.FileStore.PermanentlyDeleteFileObject(ctx, contracts.FileObjectRef{Kind: contracts.FileObjectKindCard, ID: contracts.FileObjectID(id)})
 			}
+			log.Debug("card.create.fail", zap.String("phase", "card_create"), zap.Error(err))
 			return "", err
 		}
 		if len(input.TagIDs) > 0 {
@@ -115,6 +129,7 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (string, error)
 				if fileCreated && s.deps.FileStore != nil {
 					_ = s.deps.FileStore.PermanentlyDeleteFileObject(ctx, contracts.FileObjectRef{Kind: contracts.FileObjectKindCard, ID: contracts.FileObjectID(id)})
 				}
+				log.Debug("card.create.fail", zap.String("phase", "add_tags"), zap.Error(err))
 				return "", err
 			}
 		}
@@ -129,9 +144,11 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (string, error)
 				if fileCreated && s.deps.FileStore != nil {
 					_ = s.deps.FileStore.PermanentlyDeleteFileObject(ctx, contracts.FileObjectRef{Kind: contracts.FileObjectKindCard, ID: contracts.FileObjectID(id)})
 				}
+				log.Debug("card.create.fail", zap.String("phase", "srs_init"), zap.Error(err))
 				return "", err
 			}
 		}
+		log.Debug("card.create.success", zap.String("card_id", id), zap.Duration("duration", time.Since(started)))
 		return id, nil
 	}
 
@@ -170,8 +187,10 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (string, error)
 		if fileCreated && s.deps.FileStore != nil {
 			_ = s.deps.FileStore.PermanentlyDeleteFileObject(ctx, contracts.FileObjectRef{Kind: contracts.FileObjectKindCard, ID: contracts.FileObjectID(id)})
 		}
+		log.Debug("card.create.fail", zap.String("phase", "tx"), zap.Error(err))
 		return "", err
 	}
+	log.Debug("card.create.success", zap.String("card_id", id), zap.Duration("duration", time.Since(started)))
 	return id, nil
 }
 
@@ -209,8 +228,12 @@ func (s *Service) List(ctx context.Context, opts repository.ListCardOptions) ([]
 }
 
 func (s *Service) Update(ctx context.Context, id string, input UpdateInput) error {
+	started := time.Now()
+	log := zaplog.L(ctx).Named("card")
+	log.Debug("card.update.start", zap.String("card_id", id), zap.String("status", input.Status))
 	card, err := s.deps.Cards.GetByID(ctx, id)
 	if err != nil {
+		log.Debug("card.update.fail", zap.String("phase", "load"), zap.String("card_id", id), zap.Error(err))
 		return err
 	}
 	card.Title = input.Title
@@ -227,19 +250,33 @@ func (s *Service) Update(ctx context.Context, id string, input UpdateInput) erro
 				Data: []byte(input.HTMLContent),
 			})
 			if err != nil {
+				log.Debug("card.update.fail", zap.String("phase", "file_overwrite"), zap.String("card_id", id), zap.Error(err))
 				return err
 			}
 			card.Path = loc.Path
 		}
 	}
-	return s.deps.Cards.Update(ctx, card)
+	if err := s.deps.Cards.Update(ctx, card); err != nil {
+		log.Debug("card.update.fail", zap.String("phase", "db_update"), zap.String("card_id", id), zap.Error(err))
+		return err
+	}
+	log.Debug("card.update.success", zap.String("card_id", id), zap.Duration("duration", time.Since(started)))
+	return nil
 }
 
 func (s *Service) Delete(ctx context.Context, id string) error {
+	started := time.Now()
+	log := zaplog.L(ctx).Named("card")
+	log.Debug("card.delete.start", zap.String("card_id", id))
 	if s.deps.FileStore != nil {
 		_, _ = s.deps.FileStore.MoveFileObjectToTrash(ctx, contracts.FileObjectRef{Kind: contracts.FileObjectKindCard, ID: contracts.FileObjectID(id)})
 	}
-	return s.deps.Cards.Delete(ctx, id)
+	if err := s.deps.Cards.Delete(ctx, id); err != nil {
+		log.Debug("card.delete.fail", zap.String("card_id", id), zap.Error(err))
+		return err
+	}
+	log.Debug("card.delete.success", zap.String("card_id", id), zap.Duration("duration", time.Since(started)))
+	return nil
 }
 
 func (s *Service) AddTags(ctx context.Context, cardID string, tagIDs []string) error {

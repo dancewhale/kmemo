@@ -146,7 +146,7 @@ func (d *Desktop) UnarchiveKnowledge(id string) error {
 
 func (d *Desktop) actionContext() context.Context {
 	ctx := zaplog.WithLogger(context.Background(), d.logger)
-	ctx, _ = zaplog.EnsureRequestID(ctx)
+	ctx = zaplog.WithRequestID(ctx, zaplog.NewRequestID())
 	return ctx
 }
 

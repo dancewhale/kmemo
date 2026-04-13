@@ -3,6 +3,7 @@ package zaplog
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"go.uber.org/zap"
@@ -14,7 +15,7 @@ type GormLogger struct {
 	logger        *zap.Logger
 	logLevel      gormlogger.LogLevel
 	slowThreshold time.Duration
-	debug         bool
+	traceEnabled  bool
 }
 
 func NewGormLogger(base *zap.Logger, level string, slowThreshold time.Duration, debug bool) gormlogger.Interface {
@@ -28,7 +29,7 @@ func NewGormLogger(base *zap.Logger, level string, slowThreshold time.Duration, 
 		logger:        base.Named("gorm"),
 		logLevel:      parseGormLevel(level),
 		slowThreshold: slowThreshold,
-		debug:         debug,
+		traceEnabled:  ShouldEnableRepositoryTrace(level, debug),
 	}
 }
 
@@ -54,47 +55,86 @@ func (l *GormLogger) LogMode(level gormlogger.LogLevel) gormlogger.Interface {
 }
 
 func (l *GormLogger) Info(ctx context.Context, msg string, data ...any) {
-	if l.logLevel < gormlogger.Info || !l.debug {
+	if l.logLevel < gormlogger.Info || !l.traceEnabled {
 		return
 	}
-	FromContext(ctx).Named("gorm").Debug(msg, zap.Any("data", data))
+	L(ctx).Named("gorm").Debug(msg, zap.Any("data", data))
 }
 
 func (l *GormLogger) Warn(ctx context.Context, msg string, data ...any) {
 	if l.logLevel < gormlogger.Warn {
 		return
 	}
-	FromContext(ctx).Named("gorm").Warn(msg, zap.Any("data", data))
+	L(ctx).Named("gorm").Warn(msg, zap.Any("data", data))
 }
 
 func (l *GormLogger) Error(ctx context.Context, msg string, data ...any) {
 	if l.logLevel < gormlogger.Error {
 		return
 	}
-	FromContext(ctx).Named("gorm").Error(msg, zap.Any("data", data))
+	L(ctx).Named("gorm").Error(msg, zap.Any("data", data))
 }
 
 func (l *GormLogger) Trace(ctx context.Context, begin time.Time, fc func() (string, int64), err error) {
-	if l.logLevel == gormlogger.Silent {
+	if l.logLevel == gormlogger.Silent || !l.traceEnabled {
 		return
 	}
 
 	elapsed := time.Since(begin)
-	logger := FromContext(ctx).Named("gorm")
 	fields := []zap.Field{zap.Duration("duration", elapsed)}
 
-	logSQL := l.debug || err != nil || (l.slowThreshold > 0 && elapsed > l.slowThreshold)
+	logSQL := true
 	if logSQL {
 		sql, rows := fc()
-		fields = append(fields, zap.String("sql", sql), zap.Int64("rows", rows))
+		op, table := summarizeSQL(sql)
+		fields = append(fields,
+			zap.String("sql", sql),
+			zap.Int64("rows", rows),
+			zap.String("op", op),
+			zap.String("table", table),
+		)
 	}
 
 	switch {
 	case err != nil && l.logLevel >= gormlogger.Error && !errors.Is(err, gorm.ErrRecordNotFound):
-		logger.Error("database query failed", append(fields, zap.Error(err))...)
+		L(ctx).Named("gorm").Error("database sql failed", append(fields, zap.Error(err))...)
 	case l.slowThreshold > 0 && elapsed > l.slowThreshold && l.logLevel >= gormlogger.Warn:
-		logger.Warn("slow query", fields...)
-	case l.debug && l.logLevel >= gormlogger.Info:
-		logger.Debug("database query", fields...)
+		L(ctx).Named("gorm").Warn("database sql slow", fields...)
+	case l.traceEnabled && l.logLevel >= gormlogger.Info:
+		L(ctx).Named("gorm").Debug("database sql", fields...)
 	}
+}
+
+func summarizeSQL(sql string) (op string, table string) {
+	trimmed := strings.TrimSpace(sql)
+	if trimmed == "" {
+		return "UNKNOWN", ""
+	}
+	upper := strings.ToUpper(trimmed)
+	switch {
+	case strings.HasPrefix(upper, "SELECT"):
+		return "SELECT", extractTableAfterKeyword(trimmed, "FROM")
+	case strings.HasPrefix(upper, "INSERT"):
+		return "INSERT", extractTableAfterKeyword(trimmed, "INTO")
+	case strings.HasPrefix(upper, "UPDATE"):
+		return "UPDATE", extractTableAfterKeyword(trimmed, "UPDATE")
+	case strings.HasPrefix(upper, "DELETE"):
+		return "DELETE", extractTableAfterKeyword(trimmed, "FROM")
+	default:
+		return "OTHER", ""
+	}
+}
+
+func extractTableAfterKeyword(sql string, keyword string) string {
+	upper := strings.ToUpper(sql)
+	idx := strings.Index(upper, keyword)
+	if idx < 0 {
+		return ""
+	}
+	rest := strings.TrimSpace(sql[idx+len(keyword):])
+	if rest == "" {
+		return ""
+	}
+	token := strings.Fields(rest)[0]
+	return strings.Trim(token, "`\"")
 }

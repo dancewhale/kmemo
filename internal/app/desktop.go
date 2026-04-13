@@ -34,7 +34,7 @@ func (d *Desktop) OnStartup(ctx context.Context) {
 	ctx = zaplog.WithLogger(ctx, d.logger)
 	ctx, _ = zaplog.EnsureRequestID(ctx)
 	// TODO: warm caches, migrate SQLite, verify Python health, etc.
-	zaplog.FromContext(ctx).Info("desktop startup")
+	zaplog.L(ctx).Info("desktop startup")
 }
 
 // GetVersion returns a static label for the skeleton UI.
@@ -56,14 +56,13 @@ func (d *Desktop) GetSourceProcessCapabilities(ctx context.Context) (*sourceproc
 func (d *Desktop) OnShutdown(ctx context.Context) {
 	ctx = zaplog.WithLogger(ctx, d.logger)
 	ctx, _ = zaplog.EnsureRequestID(ctx)
-	logger := zaplog.FromContext(ctx)
 	if d == nil || d.worker == nil {
-		logger.Info("desktop shutdown")
+		zaplog.L(ctx).Info("desktop shutdown")
 		return
 	}
 	if err := d.worker.Close(); err != nil {
-		logger.Error("desktop shutdown close grpc worker failed", zap.Error(err))
+		zaplog.L(ctx).Error("desktop shutdown close grpc worker failed", zap.Error(err))
 		return
 	}
-	logger.Info("desktop shutdown")
+	zaplog.L(ctx).Info("desktop shutdown")
 }
