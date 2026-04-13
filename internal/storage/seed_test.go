@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/google/uuid"
 	"kmemo/internal/storage"
 	"kmemo/internal/storage/models"
 )
@@ -26,15 +27,21 @@ func TestSeedDefaultData_idempotent(t *testing.T) {
 	if n != 1 {
 		t.Fatalf("expected 1 default knowledge, got %d", n)
 	}
-	var name string
+	var row models.Knowledge
 	if err := s.DB().Model(&models.Knowledge{}).
-		Select("name").
-		Where("id = ?", storage.DefaultSeedKnowledgeID).
-		Scan(&name).Error; err != nil {
+		Select("id", "name").
+		Limit(1).
+		Take(&row).Error; err != nil {
 		t.Fatal(err)
 	}
-	if name != "默认知识库" {
-		t.Fatalf("unexpected default name %q", name)
+	if _, err := uuid.Parse(row.ID); err != nil {
+		t.Fatalf("seed knowledge id is not a valid UUID: %q", row.ID)
+	}
+	if got := uuid.MustParse(row.ID).Version(); got != 7 {
+		t.Fatalf("seed knowledge id UUID version = %d, want 7", got)
+	}
+	if row.Name != "默认知识库" {
+		t.Fatalf("unexpected default name %q", row.Name)
 	}
 
 	if err := storage.SeedDefaultData(s.DB()); err != nil {

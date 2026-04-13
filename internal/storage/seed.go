@@ -4,14 +4,20 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 
 	"kmemo/internal/storage/models"
 )
 
-// DefaultSeedKnowledgeID 为首次初始化写入的默认知识库主键，便于排查与支持引用。
-// 与随机 UUID 并存于表中无冲突（用户自建知识库通常不会使用该 nil-UUID）。
-const DefaultSeedKnowledgeID = "00000000-0000-0000-0000-000000000001"
+// newSeedKnowledgeID 生成首次初始化知识库主键（UUID v7）。
+func newSeedKnowledgeID() (string, error) {
+	id, err := uuid.NewV7()
+	if err != nil {
+		return "", fmt.Errorf("storage: generate seed knowledge id: %w", err)
+	}
+	return id.String(), nil
+}
 
 // SeedDefaultData 在空库时写入最小可用业务数据；可重复调用，已存在知识库记录时立即返回。
 func SeedDefaultData(db *gorm.DB) error {
@@ -27,8 +33,12 @@ func SeedDefaultData(db *gorm.DB) error {
 	}
 
 	now := time.Now().UTC()
+	id, err := newSeedKnowledgeID()
+	if err != nil {
+		return err
+	}
 	row := &models.Knowledge{
-		ID:           DefaultSeedKnowledgeID,
+		ID:           id,
 		Name:         "默认知识库",
 		Description:  "",
 		ParentID:     nil,
