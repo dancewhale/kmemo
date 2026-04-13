@@ -77,6 +77,66 @@ tasks:
     cmds:
       - wails dev
 
+  dev:wails:
+    desc: 先启动 Python gRPC worker，再运行 wails dev；Go/Python 均使用 debug 级日志并连接 Python（KMEMO_SKIP_PYTHON=0）
+    deps: [proto, db:gen]
+    dir: "{{.TASKFILE_DIR}}"
+    cmds:
+      - |
+        set -eu
+        ROOT="{{.TASKFILE_DIR}}"
+        if [ -x "$ROOT/.venv/bin/python" ]; then
+          PY="$ROOT/.venv/bin/python"
+        else
+          PY="python3"
+        fi
+        cd "$ROOT/python"
+        export KMEMO_LOG_LEVEL=debug
+        "$PY" -m app.server &
+        PY_PID=$!
+        cleanup() {
+          if kill -0 "$PY_PID" 2>/dev/null; then
+            kill "$PY_PID" 2>/dev/null || true
+            wait "$PY_PID" 2>/dev/null || true
+          fi
+        }
+        # 仅用 EXIT：部分环境（Task 默认 sh）对 trap 的 INT/TERM 符号名会报 invalid signal
+        trap cleanup EXIT
+        # 不用 kill -0 判断就绪：在 Task 的 sh 下 $!/后台 PID 偶发不可靠；改探测 gRPC 端口
+        worker_ready() {
+          if "$PY" -c "import socket; socket.create_connection(('127.0.0.1',50051),timeout=0.5).close()" 2>/dev/null; then
+            return 0
+          fi
+          if "$PY" -c "import socket; socket.create_connection(('::1',50051),timeout=0.5).close()" 2>/dev/null; then
+            return 0
+          fi
+          return 1
+        }
+        READY=0
+        i=0
+        while [ "$i" -lt 50 ]; do
+          if worker_ready; then
+            READY=1
+            break
+          fi
+          i=$((i + 1))
+          sleep 0.2
+        done
+        if [ "$READY" -ne 1 ]; then
+          echo "dev:wails: 等待 127.0.0.1:50051 / ::1:50051 超时；请查看上方 Python 报错。" >&2
+          cleanup
+          exit 1
+        fi
+        cd "$ROOT/desktop"
+        export KMEMO_SKIP_PYTHON=0
+        export KMEMO_LOG_LEVEL=debug
+        export KMEMO_REPOSITORY_DEBUG=1
+        wails dev
+        STATUS=$?
+        cleanup
+        trap - EXIT
+        exit "$STATUS"
+
   test:go:
     desc: Run Go tests
     deps: [proto, db:gen]
@@ -130,15 +190,15 @@ tasks:
     deps: [build:go, build:wails]
 
   dev:
-    desc: Regenerate protos; use two terminals for Python + Wails (or run headless Go)
+    desc: Regenerate protos; use two terminals for Python + Wails (或一条命令 dev:wails)
     deps: [proto]
     dir: "{{.TASKFILE_DIR}}"
     cmds:
       - |
         echo "Protos ready."
-        echo "  Terminal A: task run:python"
-        echo "  Terminal B: task run:wails"
-        echo "  Headless Go: task run:go"
+        echo "  单终端（Python + Wails + debug 日志）: task dev:wails"
+        echo "  双终端: task run:python  与  task run:wails"
+        echo "  无 Python: task run:go"
 
   clean:
     desc: Remove generated code and common build artifacts

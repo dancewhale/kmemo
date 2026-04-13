@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import sys
 from concurrent import futures
 from pathlib import Path
@@ -21,6 +22,18 @@ from app.logging_setup import configure_logging, get_logger
 from app.services import fsrs_service, html_service, import_service
 
 _LOG = get_logger("kmemo.worker")
+
+
+def _stdlib_log_level() -> int:
+    """与 Go 侧 KMEMO_LOG_LEVEL 对齐（debug/info/warn/error）。"""
+    v = os.environ.get("KMEMO_LOG_LEVEL", "info").strip().lower()
+    return {
+        "debug": logging.DEBUG,
+        "info": logging.INFO,
+        "warn": logging.WARNING,
+        "warning": logging.WARNING,
+        "error": logging.ERROR,
+    }.get(v, logging.INFO)
 
 
 class KmemoProcessor(kmemo_pb2_grpc.KmemoProcessorServicer):
@@ -105,7 +118,7 @@ class KmemoProcessor(kmemo_pb2_grpc.KmemoProcessorServicer):
 
 
 def serve(address: str = "[::]:50051") -> None:
-    configure_logging(logging.INFO)
+    configure_logging(_stdlib_log_level())
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=4))
     kmemo_pb2_grpc.add_KmemoProcessorServicer_to_server(KmemoProcessor(), server)
     server.add_insecure_port(address)
