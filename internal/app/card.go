@@ -42,6 +42,12 @@ type CardDetailDTO struct {
 	Children []*CardSummaryDTO `json:"children"`
 }
 
+// ListCardsResult 为 Wails 绑定使用：v2 仅支持单返回值 + error，不能返回 ([]*CardDTO, int64, error)。
+type ListCardsResult struct {
+	Items []*CardDTO `json:"items"`
+	Total int64      `json:"total"`
+}
+
 type CardFilters struct {
 	KnowledgeID *string  `json:"knowledgeId"`
 	CardType    string   `json:"cardType"`
@@ -133,7 +139,7 @@ func (d *Desktop) GetCardDetail(id string) (*CardDetailDTO, error) {
 	return detail, nil
 }
 
-func (d *Desktop) ListCards(filters CardFilters) ([]*CardDTO, int64, error) {
+func (d *Desktop) ListCards(filters CardFilters) (*ListCardsResult, error) {
 	ctx := d.actionContext()
 	items, total, err := d.actions.Card.List(ctx, repository.ListCardOptions{
 		KnowledgeID: filters.KnowledgeID,
@@ -150,14 +156,14 @@ func (d *Desktop) ListCards(filters CardFilters) ([]*CardDTO, int64, error) {
 		Preload:     []string{"SRS", "Knowledge"},
 	})
 	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 	result := make([]*CardDTO, 0, len(items))
 	for _, item := range items {
 		tags, _ := d.actions.Card.GetTags(ctx, item.ID)
 		result = append(result, toCardDTO(item, tags))
 	}
-	return result, total, nil
+	return &ListCardsResult{Items: result, Total: total}, nil
 }
 
 func (d *Desktop) GetCardChildren(parentID string) ([]*CardDTO, error) {
