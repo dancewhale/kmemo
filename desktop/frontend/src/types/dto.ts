@@ -92,3 +92,21 @@ export interface CreateCardRequest {
   htmlContent: string;
   tagIds: string[];
 }
+
+export interface UpdateCardRequest {
+  title: string;
+  htmlContent: string;
+  status: string;
+}
+
+export interface MoveCardRequest {
+  cardId: string;
+  targetParentId?: string | null;
+  targetIndex: number;
+}
+
+export interface ReorderCardChildrenRequest {
+  knowledgeId: string;
+  parentId?: string | null;
+  orderedChildIds: string[];
+}

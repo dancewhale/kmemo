@@ -12,32 +12,33 @@
     </div>
     <p v-else-if="items.length === 0" class="panel-description">No root cards available.</p>
 
-    <ul v-else class="tree-list">
-      <CardTreeNodeItem
-        v-for="item in items"
-        :key="item.id"
-        :node="item"
-        :children="treeChildren[item.id] ?? []"
-        :error="treeErrors[item.id] ?? null"
-        :expanded="Boolean(treeExpanded[item.id])"
-        :loading="Boolean(treeLoading[item.id])"
-        :selected-id="selectedId"
-        :tree-children="treeChildren"
-        :tree-errors="treeErrors"
-        :tree-expanded="treeExpanded"
-        :tree-loading="treeLoading"
-        @select="$emit('select', $event)"
-        @toggle="$emit('toggle', $event)"
-      />
-    </ul>
+    <CardTreeHeTree
+      v-else
+      :root-items="items"
+      :selected-id="selectedId"
+      :tree-children="treeChildren"
+      :tree-errors="treeErrors"
+      :tree-expanded="treeExpanded"
+      :tree-loading="treeLoading"
+      :on-node-create-child="commands.onNodeCreateChild"
+      :on-node-rename="commands.onNodeRename"
+      :on-node-delete="commands.onNodeDelete"
+      :on-node-drop="commands.onNodeDrop"
+      @node-select="$emit('select', $event)"
+      @node-toggle="$emit('toggle', $event)"
+    />
   </section>
 </template>
 
 <script setup lang="ts">
-import CardTreeNodeItem from "./CardTreeNodeItem.vue";
+import CardTreeHeTree from "./CardTreeHeTree.vue";
+import { useCardTreeCommands } from "./composables/useCardTreeCommands";
 import type { CardDTO } from "../../types/dto";
 
-defineProps<{
+const props = defineProps<{
+  knowledgeId: string | null;
+  onReload: () => Promise<void>;
+  onSelectCard: (id: string) => Promise<void>;
   items: CardDTO[];
   error: string | null;
   loading: boolean;
@@ -48,11 +49,18 @@ defineProps<{
   treeLoading: Record<string, boolean>;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
   (event: "retry"): void;
   (event: "select", id: string): void;
   (event: "toggle", id: string): void;
+  (event: "reload"): Promise<void>;
 }>();
+
+const commands = useCardTreeCommands({
+  getKnowledgeId: () => props.knowledgeId,
+  onReload: props.onReload,
+  onSelect: props.onSelectCard,
+});
 </script>
 
 <style scoped>
@@ -78,12 +86,4 @@ defineEmits<{
   cursor: pointer;
 }
 
-.tree-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
 </style>

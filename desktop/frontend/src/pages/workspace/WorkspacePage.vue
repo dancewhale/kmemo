@@ -26,6 +26,9 @@
           @update:keyword="handleKeywordChange"
         />
         <CardTreePanel
+          :knowledge-id="workspace.selectedKnowledgeId"
+          :on-reload="refreshCards"
+          :on-select-card="handleSelectCard"
           :items="card.rootCards"
           :error="card.rootTreeError"
           :loading="card.loadingRootTree"
