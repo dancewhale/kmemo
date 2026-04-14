@@ -10,20 +10,20 @@ import (
 )
 
 type CardDTO struct {
-	ID               string     `json:"id"`
-	KnowledgeID      string     `json:"knowledgeId"`
-	KnowledgeName    string     `json:"knowledgeName"`
-	SourceDocumentID *string    `json:"sourceDocumentId"`
-	ParentID         *string    `json:"parentId"`
-	Title            string     `json:"title"`
-	CardType         string     `json:"cardType"`
-	HTMLPath         string     `json:"htmlPath"`
-	HTMLContent      string     `json:"htmlContent"`
-	Status           string     `json:"status"`
-	Tags             []*TagDTO  `json:"tags"`
-	SRS              *SRSDTO    `json:"srs"`
-	CreatedAt        time.Time  `json:"createdAt"`
-	UpdatedAt        time.Time  `json:"updatedAt"`
+	ID               string    `json:"id"`
+	KnowledgeID      string    `json:"knowledgeId"`
+	KnowledgeName    string    `json:"knowledgeName"`
+	SourceDocumentID *string   `json:"sourceDocumentId"`
+	ParentID         *string   `json:"parentId"`
+	Title            string    `json:"title"`
+	CardType         string    `json:"cardType"`
+	HTMLPath         string    `json:"htmlPath"`
+	HTMLContent      string    `json:"htmlContent"`
+	Status           string    `json:"status"`
+	Tags             []*TagDTO `json:"tags"`
+	SRS              *SRSDTO   `json:"srs"`
+	CreatedAt        time.Time `json:"createdAt"`
+	UpdatedAt        time.Time `json:"updatedAt"`
 }
 
 type CardSummaryDTO struct {
@@ -56,7 +56,7 @@ type CardFilters struct {
 	Keyword     string   `json:"keyword"`
 	ParentID    *string  `json:"parentId"`
 	IsRoot      *bool    `json:"isRoot"`
-	OrderBy     string   `json:"orderBy"`   // title, created_at, updated_at, sort_order；空则按仓储默认（无显式排序）
+	OrderBy     string   `json:"orderBy"` // title, created_at, updated_at, sort_order；空则按仓储默认（无显式排序）
 	OrderDesc   bool     `json:"orderDesc"`
 	Limit       int      `json:"limit"`
 	Offset      int      `json:"offset"`
@@ -76,6 +76,18 @@ type UpdateCardRequest struct {
 	Title       string `json:"title"`
 	HTMLContent string `json:"htmlContent"`
 	Status      string `json:"status"`
+}
+
+type MoveCardRequest struct {
+	CardID         string  `json:"cardId"`
+	TargetParentID *string `json:"targetParentId"`
+	TargetIndex    int     `json:"targetIndex"`
+}
+
+type ReorderCardChildrenRequest struct {
+	KnowledgeID     string   `json:"knowledgeId"`
+	ParentID        *string  `json:"parentId"`
+	OrderedChildIDs []string `json:"orderedChildIds"`
 }
 
 func (d *Desktop) CreateCard(req CreateCardRequest) (string, error) {
@@ -200,6 +212,30 @@ func (d *Desktop) UpdateCard(id string, req UpdateCardRequest) error {
 func (d *Desktop) DeleteCard(id string) error {
 	ctx := d.actionContext()
 	return d.actions.Card.Delete(ctx, id)
+}
+
+func (d *Desktop) MoveCard(req MoveCardRequest) error {
+	if strings.TrimSpace(req.CardID) == "" || req.TargetIndex < 0 {
+		return repository.ErrInvalidInput
+	}
+	ctx := d.actionContext()
+	return d.actions.Card.Move(ctx, card.MoveInput{
+		CardID:         strings.TrimSpace(req.CardID),
+		TargetParentID: req.TargetParentID,
+		TargetIndex:    req.TargetIndex,
+	})
+}
+
+func (d *Desktop) ReorderCardChildren(req ReorderCardChildrenRequest) error {
+	if strings.TrimSpace(req.KnowledgeID) == "" || len(req.OrderedChildIDs) == 0 {
+		return repository.ErrInvalidInput
+	}
+	ctx := d.actionContext()
+	return d.actions.Card.ReorderChildren(ctx, card.ReorderChildrenInput{
+		KnowledgeID:     strings.TrimSpace(req.KnowledgeID),
+		ParentID:        req.ParentID,
+		OrderedChildIDs: req.OrderedChildIDs,
+	})
 }
 
 func (d *Desktop) AddCardTags(cardID string, tagIDs []string) error {

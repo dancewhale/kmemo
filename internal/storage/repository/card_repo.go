@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"kmemo/internal/storage/dao"
 	"kmemo/internal/storage/models"
 	"time"
@@ -48,6 +49,25 @@ type CardRepository interface {
 
 	// GetTags 获取卡片的所有标签
 	GetTags(ctx context.Context, cardID string) ([]*models.Tag, error)
+
+	// GetMaxSortOrder 获取同级节点最大 sort_order
+	GetMaxSortOrder(ctx context.Context, knowledgeID string, parentID *string) (int, error)
+
+	// ListSiblings 按 sort_order 升序获取同级节点
+	ListSiblings(ctx context.Context, knowledgeID string, parentID *string) ([]*models.Card, error)
+
+	// BatchUpdateSortOrders 批量更新 sort_order（可同时更新 parent/is_root）
+	BatchUpdateSortOrders(ctx context.Context, updates []CardSortOrderUpdate) error
+
+	// UpdateParent 更新卡片父节点与根节点标记
+	UpdateParent(ctx context.Context, cardID string, targetParentID *string, isRoot bool) error
+}
+
+type CardSortOrderUpdate struct {
+	CardID    string
+	SortOrder int
+	ParentID  *string
+	IsRoot    bool
 }
 
 // ListCardOptions 卡片查询选项
@@ -62,7 +82,7 @@ type ListCardOptions struct {
 	IsRoot           *bool    // 是否根卡片
 	Limit            int
 	Offset           int
-	OrderBy          string   // title, created_at, updated_at, sort_order
+	OrderBy          string // title, created_at, updated_at, sort_order
 	OrderDesc        bool
 	Preload          []string // 预加载关联: Tags, SRS, Assets, Knowledge
 }
@@ -300,4 +320,73 @@ func (r *cardRepo) GetTags(ctx context.Context, cardID string) ([]*models.Tag, e
 		}
 	}
 	return tags, nil
+}
+
+func (r *cardRepo) GetMaxSortOrder(ctx context.Context, knowledgeID string, parentID *string) (int, error) {
+	var maxSort sql.NullInt64
+	q := r.db.WithContext(ctx).Model(&models.Card{}).Where("knowledge_id = ?", knowledgeID)
+	if parentID == nil {
+		q = q.Where("parent_id IS NULL").Where("is_root = ?", true)
+	} else {
+		q = q.Where("parent_id = ?", *parentID).Where("is_root = ?", false)
+	}
+	if err := q.Select("COALESCE(MAX(sort_order), -1)").Scan(&maxSort).Error; err != nil {
+		return 0, convertError(err)
+	}
+	if !maxSort.Valid || maxSort.Int64 < 0 {
+		return -1, nil
+	}
+	return int(maxSort.Int64), nil
+}
+
+func (r *cardRepo) ListSiblings(ctx context.Context, knowledgeID string, parentID *string) ([]*models.Card, error) {
+	isRoot := parentID == nil
+	items, _, err := r.List(ctx, ListCardOptions{
+		KnowledgeID: &knowledgeID,
+		ParentID:    parentID,
+		IsRoot:      &isRoot,
+		OrderBy:     "sort_order",
+		OrderDesc:   false,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+func (r *cardRepo) BatchUpdateSortOrders(ctx context.Context, updates []CardSortOrderUpdate) error {
+	for _, upd := range updates {
+		changes := map[string]any{
+			"sort_order": upd.SortOrder,
+			"updated_at": time.Now(),
+		}
+		if upd.ParentID == nil {
+			changes["parent_id"] = nil
+		} else {
+			changes["parent_id"] = *upd.ParentID
+		}
+		changes["is_root"] = upd.IsRoot
+		if _, err := dao.Use(r.db).Card.WithContext(ctx).
+			Where(dao.Card.ID.Eq(upd.CardID)).
+			Updates(changes); err != nil {
+			return convertError(err)
+		}
+	}
+	return nil
+}
+
+func (r *cardRepo) UpdateParent(ctx context.Context, cardID string, targetParentID *string, isRoot bool) error {
+	changes := map[string]any{
+		"is_root":    isRoot,
+		"updated_at": time.Now(),
+	}
+	if targetParentID == nil {
+		changes["parent_id"] = nil
+	} else {
+		changes["parent_id"] = *targetParentID
+	}
+	_, err := dao.Use(r.db).Card.WithContext(ctx).
+		Where(dao.Card.ID.Eq(cardID)).
+		Updates(changes)
+	return convertError(err)
 }

@@ -52,10 +52,22 @@ type UpdateInput struct {
 	Status      string
 }
 
+type MoveInput struct {
+	CardID         string
+	TargetParentID *string
+	TargetIndex    int
+}
+
+type ReorderChildrenInput struct {
+	KnowledgeID     string
+	ParentID        *string
+	OrderedChildIDs []string
+}
+
 // GetOutput 为单卡查询结果：包含数据库中的 Card 以及从 FileStore 读取的正文 HTML。
 type GetOutput struct {
-	Card         *models.Card
-	HTMLContent  string
+	Card        *models.Card
+	HTMLContent string
 }
 
 func (s *Service) Create(ctx context.Context, input CreateInput) (string, error) {
@@ -70,6 +82,17 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (string, error)
 	if _, err := s.deps.Knowledge.GetByID(ctx, input.KnowledgeID); err != nil {
 		log.Debug("card.create.fail", zap.String("phase", "knowledge"), zap.Error(err))
 		return "", err
+	}
+	if input.ParentID != nil {
+		parent, err := s.deps.Cards.GetByID(ctx, *input.ParentID)
+		if err != nil {
+			log.Debug("card.create.fail", zap.String("phase", "parent"), zap.Error(err))
+			return "", err
+		}
+		if parent.KnowledgeID != input.KnowledgeID {
+			log.Debug("card.create.fail", zap.String("phase", "parent_knowledge_mismatch"))
+			return "", repository.ErrInvalidInput
+		}
 	}
 
 	uid, genErr := uuid.NewV7()
@@ -112,11 +135,17 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (string, error)
 		HTMLHash:         htmlHash,
 		Status:           "active",
 		IsRoot:           input.ParentID == nil,
+		SortOrder:        0,
 		CreatedAt:        now,
 		UpdatedAt:        now,
 	}
 
 	if s.deps.Transactions == nil {
+		maxSort, err := s.deps.Cards.GetMaxSortOrder(ctx, input.KnowledgeID, input.ParentID)
+		if err != nil {
+			return "", err
+		}
+		card.SortOrder = maxSort + 1
 		if err := s.deps.Cards.Create(ctx, card); err != nil {
 			if fileCreated && s.deps.FileStore != nil {
 				_ = s.deps.FileStore.PermanentlyDeleteFileObject(ctx, contracts.FileObjectRef{Kind: contracts.FileObjectKindCard, ID: contracts.FileObjectID(id)})
@@ -161,6 +190,11 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (string, error)
 		if !ok {
 			return fmt.Errorf("card: repository.WithTx did not return SRSRepository")
 		}
+		maxSort, err := cards.GetMaxSortOrder(ctx, input.KnowledgeID, input.ParentID)
+		if err != nil {
+			return err
+		}
+		card.SortOrder = maxSort + 1
 
 		if err := cards.Create(ctx, card); err != nil {
 			return err
@@ -192,6 +226,132 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (string, error)
 	}
 	log.Debug("card.create.success", zap.String("card_id", id), zap.Duration("duration", time.Since(started)))
 	return id, nil
+}
+
+func (s *Service) Move(ctx context.Context, input MoveInput) error {
+	if input.CardID == "" || input.TargetIndex < 0 {
+		return repository.ErrInvalidInput
+	}
+	cardModel, err := s.deps.Cards.GetByID(ctx, input.CardID)
+	if err != nil {
+		return err
+	}
+	if input.TargetParentID != nil {
+		if *input.TargetParentID == input.CardID {
+			return repository.ErrInvalidInput
+		}
+		targetParent, err := s.deps.Cards.GetByID(ctx, *input.TargetParentID)
+		if err != nil {
+			return err
+		}
+		if targetParent.KnowledgeID != cardModel.KnowledgeID {
+			return repository.ErrInvalidInput
+		}
+		if err := s.ensureNotDescendant(ctx, input.CardID, *input.TargetParentID); err != nil {
+			return err
+		}
+	}
+
+	run := func(cards repository.CardRepository) error {
+		sourceParentID := cardModel.ParentID
+		sourceSiblings, err := cards.ListSiblings(ctx, cardModel.KnowledgeID, sourceParentID)
+		if err != nil {
+			return err
+		}
+		targetSiblings, err := cards.ListSiblings(ctx, cardModel.KnowledgeID, input.TargetParentID)
+		if err != nil {
+			return err
+		}
+
+		if sameParent(sourceParentID, input.TargetParentID) {
+			targetSiblings = sourceSiblings
+		}
+
+		sourceWithout := removeCardByID(sourceSiblings, input.CardID)
+		targetWithout := removeCardByID(targetSiblings, input.CardID)
+		targetIndex := clampIndex(input.TargetIndex, len(targetWithout))
+		targetAfter := insertCardAt(targetWithout, cardModel, targetIndex)
+
+		updates := make([]repository.CardSortOrderUpdate, 0, len(targetAfter)+len(sourceWithout))
+		for i, item := range targetAfter {
+			updates = append(updates, repository.CardSortOrderUpdate{
+				CardID:    item.ID,
+				SortOrder: i,
+				ParentID:  input.TargetParentID,
+				IsRoot:    input.TargetParentID == nil,
+			})
+		}
+		if !sameParent(sourceParentID, input.TargetParentID) {
+			for i, item := range sourceWithout {
+				updates = append(updates, repository.CardSortOrderUpdate{
+					CardID:    item.ID,
+					SortOrder: i,
+					ParentID:  sourceParentID,
+					IsRoot:    sourceParentID == nil,
+				})
+			}
+		}
+		return cards.BatchUpdateSortOrders(ctx, updates)
+	}
+
+	if s.deps.Transactions == nil {
+		return run(s.deps.Cards)
+	}
+	return s.deps.Transactions.WithTx(ctx, func(tx *gorm.DB) error {
+		cards, ok := s.deps.Cards.WithTx(tx).(repository.CardRepository)
+		if !ok {
+			return fmt.Errorf("card: repository.WithTx did not return CardRepository")
+		}
+		return run(cards)
+	})
+}
+
+func (s *Service) ReorderChildren(ctx context.Context, input ReorderChildrenInput) error {
+	if input.KnowledgeID == "" || len(input.OrderedChildIDs) == 0 {
+		return repository.ErrInvalidInput
+	}
+	run := func(cards repository.CardRepository) error {
+		siblings, err := cards.ListSiblings(ctx, input.KnowledgeID, input.ParentID)
+		if err != nil {
+			return err
+		}
+		if len(siblings) != len(input.OrderedChildIDs) {
+			return repository.ErrInvalidInput
+		}
+		exists := make(map[string]struct{}, len(siblings))
+		for _, s := range siblings {
+			exists[s.ID] = struct{}{}
+		}
+		seen := make(map[string]struct{}, len(input.OrderedChildIDs))
+		updates := make([]repository.CardSortOrderUpdate, 0, len(input.OrderedChildIDs))
+		for i, id := range input.OrderedChildIDs {
+			if _, ok := exists[id]; !ok {
+				return repository.ErrInvalidInput
+			}
+			if _, ok := seen[id]; ok {
+				return repository.ErrInvalidInput
+			}
+			seen[id] = struct{}{}
+			updates = append(updates, repository.CardSortOrderUpdate{
+				CardID:    id,
+				SortOrder: i,
+				ParentID:  input.ParentID,
+				IsRoot:    input.ParentID == nil,
+			})
+		}
+		return cards.BatchUpdateSortOrders(ctx, updates)
+	}
+
+	if s.deps.Transactions == nil {
+		return run(s.deps.Cards)
+	}
+	return s.deps.Transactions.WithTx(ctx, func(tx *gorm.DB) error {
+		cards, ok := s.deps.Cards.WithTx(tx).(repository.CardRepository)
+		if !ok {
+			return fmt.Errorf("card: repository.WithTx did not return CardRepository")
+		}
+		return run(cards)
+	})
 }
 
 func (s *Service) Get(ctx context.Context, id string) (*GetOutput, error) {
@@ -367,3 +527,56 @@ func hashContent(content string) string {
 	return hex.EncodeToString(sum[:])
 }
 
+func sameParent(a, b *string) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	return *a == *b
+}
+
+func clampIndex(idx, size int) int {
+	if idx < 0 {
+		return 0
+	}
+	if idx > size {
+		return size
+	}
+	return idx
+}
+
+func removeCardByID(items []*models.Card, cardID string) []*models.Card {
+	result := make([]*models.Card, 0, len(items))
+	for _, item := range items {
+		if item.ID == cardID {
+			continue
+		}
+		result = append(result, item)
+	}
+	return result
+}
+
+func insertCardAt(items []*models.Card, target *models.Card, index int) []*models.Card {
+	result := make([]*models.Card, 0, len(items)+1)
+	result = append(result, items[:index]...)
+	result = append(result, target)
+	result = append(result, items[index:]...)
+	return result
+}
+
+func (s *Service) ensureNotDescendant(ctx context.Context, cardID, targetParentID string) error {
+	parentID := &targetParentID
+	for parentID != nil {
+		if *parentID == cardID {
+			return repository.ErrInvalidInput
+		}
+		node, err := s.deps.Cards.GetByID(ctx, *parentID)
+		if err != nil {
+			return err
+		}
+		parentID = node.ParentID
+	}
+	return nil
+}
