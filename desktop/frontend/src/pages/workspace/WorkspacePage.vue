@@ -153,6 +153,9 @@ async function handleCreateCard(payload: CreateCardRequest) {
   const submitFilters = { ...cardFilters.value };
   const submitSessionId = createSessionId;
   const id = await card.submitCreateCard(payload);
+  if (!id) {
+    return;
+  }
   if (createSessionId !== submitSessionId) {
     return;
   }

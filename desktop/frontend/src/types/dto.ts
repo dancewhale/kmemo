@@ -63,6 +63,12 @@ export interface CardDetailDTO extends CardDTO {
   children: CardSummaryDTO[];
 }
 
+/** 与 Go `ListCardsResult` 一致；Wails v2 需单返回值，不能再用 tuple。 */
+export interface ListCardsResult {
+  items: CardDTO[];
+  total: number;
+}
+
 export interface CardFilters {
   knowledgeId?: string | null;
   cardType?: string;

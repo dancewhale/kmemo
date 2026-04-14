@@ -1,8 +1,8 @@
 import { callApp } from "./appBridge";
-import type { CardDTO, CardDetailDTO, CardFilters, CreateCardRequest } from "../types/dto";
+import type { CardDTO, CardDetailDTO, CardFilters, CreateCardRequest, ListCardsResult } from "../types/dto";
 
 export async function listCards(filters: CardFilters) {
-  return callApp<[CardDTO[], number] | { 0: CardDTO[]; 1: number }>("ListCards", filters);
+  return callApp<ListCardsResult>("ListCards", filters);
 }
 
 export function getCard(id: string) {

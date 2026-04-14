@@ -27,7 +27,8 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     loading.value = true;
     error.value = null;
     try {
-      const tree = await getKnowledgeTree(null);
+      const treeResult = await getKnowledgeTree(null);
+      const tree = Array.isArray(treeResult) ? treeResult : [];
       knowledgeTree.value = tree;
       if (!selectedKnowledgeId.value && tree.length > 0) {
         selectedKnowledgeId.value = tree[0].id;

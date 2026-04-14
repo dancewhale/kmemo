@@ -5,11 +5,50 @@ import { createCard, getCardChildren, getCardDetail, listCards } from "../bridge
 import { listTags } from "../bridge/tagService";
 import type { CardDTO, CardDetailDTO, CardFilters, CreateCardRequest, TagDTO } from "../types/dto";
 
-function normalizeListCardsResult(result: [CardDTO[], number] | { 0: CardDTO[]; 1: number }) {
-  if (Array.isArray(result)) {
-    return { items: result[0] ?? [], total: result[1] ?? 0 };
+function isCardDTO(value: unknown): value is CardDTO {
+  return Boolean(value) && typeof value === "object" && "id" in (value as Record<string, unknown>);
+}
+
+function normalizeListCardsResult(result: unknown): { items: CardDTO[]; total: number } {
+  if (result && typeof result === "object" && "items" in result) {
+    const r = result as { items?: unknown; total?: unknown };
+    if (Array.isArray(r.items)) {
+      return {
+        items: r.items.filter(isCardDTO),
+        total: typeof r.total === "number" ? r.total : r.items.length,
+      };
+    }
   }
-  return { items: result[0] ?? [], total: result[1] ?? 0 };
+  if (Array.isArray(result)) {
+    // Wails may return either:
+    // 1) tuple: [items, total]
+    // 2) items only: CardDTO[]
+    if (result.length === 0) {
+      return { items: [], total: 0 };
+    }
+    if (Array.isArray(result[0])) {
+      return {
+        items: Array.isArray(result[0]) ? (result[0] as CardDTO[]) : [],
+        total: typeof result[1] === "number" ? result[1] : 0,
+      };
+    }
+    if (isCardDTO(result[0])) {
+      const items = result.filter(isCardDTO);
+      return { items, total: items.length };
+    }
+    return {
+      items: [],
+      total: typeof result[1] === "number" ? result[1] : 0,
+    };
+  }
+  if (result && typeof result === "object") {
+    const tupleLike = result as { 0?: unknown; 1?: unknown };
+    return {
+      items: Array.isArray(tupleLike[0]) ? (tupleLike[0] as CardDTO[]) : [],
+      total: typeof tupleLike[1] === "number" ? tupleLike[1] : 0,
+    };
+  }
+  return { items: [], total: 0 };
 }
 
 export const useCardStore = defineStore("card", () => {
@@ -184,14 +223,15 @@ export const useCardStore = defineStore("card", () => {
     }
   }
 
-  async function submitCreateCard(payload: CreateCardRequest) {
+  /** 成功返回新卡片 id；失败时写入 createError 并返回 null（不向调用方 throw，便于作为 Vue 事件里的 async 处理器）。 */
+  async function submitCreateCard(payload: CreateCardRequest): Promise<string | null> {
     creating.value = true;
     createError.value = null;
     try {
       return await createCard(payload);
     } catch (err) {
       createError.value = err instanceof Error ? err.message : "Failed to create card";
-      throw err;
+      return null;
     } finally {
       creating.value = false;
     }
