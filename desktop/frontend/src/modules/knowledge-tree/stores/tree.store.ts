@@ -1,6 +1,9 @@
 import { defineStore } from 'pinia'
 import { mockKnowledgeNodes } from '@/mock/tree'
+import { isWailsAvailable } from '@/api/wails'
+import { useToast } from '@/shared/composables/useToast'
 import { useWorkspaceStore } from '@/modules/workspace/stores/workspace.store'
+import * as knowledgeRepository from '../services/knowledge.repository'
 import { buildTree, flattenVisibleTree } from '../services/tree.mapper'
 import type { KnowledgeNode, UITreeNode } from '../types'
 
@@ -117,22 +120,45 @@ export const useTreeStore = defineStore('knowledge-tree', {
   },
 
   actions: {
-    async initialize() {
-      if (this.initialized) {
+    async initialize(opts?: { force?: boolean }) {
+      if (this.initialized && !opts?.force) {
         return
       }
       this.loading = true
-      await Promise.resolve()
-      this.rawNodes = mockKnowledgeNodes.map((n) => ({ ...n }))
-      this.expandedNodeIds = [
-        'kn-reading',
-        'kn-knowledge',
-        'kn-mem-topic',
-        'kn-rw-topic',
-        'kn-sr-topic',
-      ]
-      this.initialized = true
-      this.loading = false
+      const toast = useToast()
+      try {
+        if (isWailsAvailable()) {
+          const res = await knowledgeRepository.fetchKnowledgeTree(null)
+          if (res.ok) {
+            this.rawNodes = res.data
+            const roots = res.data.filter((n) => n.parentId == null).map((n) => n.id)
+            this.expandedNodeIds = roots.length ? roots : [...this.expandedNodeIds]
+          } else {
+            toast.warning(res.error.message || '无法加载知识树')
+            this.rawNodes = mockKnowledgeNodes.map((n) => ({ ...n }))
+            this.expandedNodeIds = [
+              'kn-reading',
+              'kn-knowledge',
+              'kn-mem-topic',
+              'kn-rw-topic',
+              'kn-sr-topic',
+            ]
+          }
+        } else {
+          await Promise.resolve()
+          this.rawNodes = mockKnowledgeNodes.map((n) => ({ ...n }))
+          this.expandedNodeIds = [
+            'kn-reading',
+            'kn-knowledge',
+            'kn-mem-topic',
+            'kn-rw-topic',
+            'kn-sr-topic',
+          ]
+        }
+      } finally {
+        this.initialized = true
+        this.loading = false
+      }
     },
 
     setSelectedNode(id: string | null) {
@@ -247,6 +273,24 @@ export const useTreeStore = defineStore('knowledge-tree', {
         this.expandNode(next.parentId)
       }
       this.setSelectedNode(next.id)
+    },
+
+    /** Attach a card row after host `CreateCard` so the existing card UI keeps working. */
+    appendHostCardNode(payload: { id: string; parentId: string | null; title: string }) {
+      const now = new Date().toISOString()
+      const title = payload.title.startsWith('Card:') ? payload.title : `Card: ${payload.title}`
+      this.rawNodes.push({
+        id: payload.id,
+        parentId: payload.parentId,
+        title,
+        type: 'card',
+        createdAt: now,
+        updatedAt: now,
+      })
+      if (payload.parentId) {
+        this.expandNode(payload.parentId)
+      }
+      this.setSelectedNode(payload.id)
     },
 
     removeNodeSubtree(nodeId: string): boolean {

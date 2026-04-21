@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
+import { isWailsAvailable } from '@/api/wails'
 import { createEntityId } from '@/shared/utils/id'
 import { useToast } from '@/shared/composables/useToast'
+import * as cardRepository from '../services/card.repository'
 import { useTreeStore } from '@/modules/knowledge-tree/stores/tree.store'
 import { useReviewStore } from '@/modules/review/stores/review.store'
 import { buildReviewItemFromCard } from '@/modules/review/services/review.mapper'
@@ -90,20 +92,32 @@ export const useCardStore = defineStore('card', {
         return
       }
       this.saving = true
-      await new Promise((r) => window.setTimeout(r, 120))
+      const toast = useToast()
       const prev = this.items[idx]
-      const next: CardItem = {
-        ...prev,
-        title: payload.title ?? prev.title,
-        prompt: payload.prompt ?? prev.prompt,
-        answer: payload.answer ?? prev.answer,
-        updatedAt: new Date().toISOString(),
+      try {
+        if (isWailsAvailable() && !id.startsWith('card-')) {
+          const res = await cardRepository.persistCardUpdate(id, payload, prev)
+          if (!res.ok) {
+            toast.warning(res.error.message ?? '保存失败')
+            return
+          }
+        } else {
+          await new Promise((r) => window.setTimeout(r, 120))
+        }
+        const next: CardItem = {
+          ...prev,
+          title: payload.title ?? prev.title,
+          prompt: payload.prompt ?? prev.prompt,
+          answer: payload.answer ?? prev.answer,
+          updatedAt: new Date().toISOString(),
+        }
+        this.items.splice(idx, 1, next)
+        if (payload.title != null && payload.title !== prev.title) {
+          useTreeStore().updateNodeTitle(next.nodeId, next.title)
+        }
+      } finally {
+        this.saving = false
       }
-      this.items.splice(idx, 1, next)
-      if (payload.title != null && payload.title !== prev.title) {
-        useTreeStore().updateNodeTitle(next.nodeId, next.title)
-      }
-      this.saving = false
     },
 
     attachReviewItem(cardId: string, reviewItemId: string) {

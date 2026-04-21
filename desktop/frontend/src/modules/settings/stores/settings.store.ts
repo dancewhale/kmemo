@@ -3,12 +3,15 @@ import { WORKSPACE_LAST_CONTEXT_STORAGE_KEY } from '@/shared/constants/preferenc
 import { readLocalStorageJSON, writeLocalStorageJSON } from '@/shared/utils/storage'
 import { useWorkspaceStore } from '@/modules/workspace/stores/workspace.store'
 import { DEFAULT_PREFERENCES } from '../services/settings.defaults'
+import { isWailsAvailable } from '@/api/wails'
 import {
   exportPreferences as exportPreferencesText,
   loadPreferences,
   resetPreferences as resetPreferenceStorage,
   savePreferences,
 } from '../services/settings.storage'
+import * as hostSettingsRepository from '../services/settings.repository'
+import type { HostFsrsParameterView } from '../services/settings.mapper'
 import type {
   AdvancedPreferences,
   AppearancePreferences,
@@ -21,6 +24,8 @@ import type {
 interface SettingsState {
   preferences: AppPreferences
   initialized: boolean
+  /** Default FSRS row from Go host when running under Wails. */
+  hostFsrsParameter: HostFsrsParameterView | null
 }
 
 function resolveThemeMode(themeMode: ThemeMode): 'light' | 'dark' {
@@ -37,6 +42,7 @@ export const useSettingsStore = defineStore('settings', {
   state: (): SettingsState => ({
     preferences: DEFAULT_PREFERENCES,
     initialized: false,
+    hostFsrsParameter: null,
   }),
   getters: {
     workspacePreferences(): WorkspacePreferences {
@@ -65,11 +71,23 @@ export const useSettingsStore = defineStore('settings', {
     initialize() {
       if (this.initialized) {
         this.applyPreferences()
+        void this.loadHostFsrsIfAvailable()
         return
       }
       this.preferences = loadPreferences()
       this.initialized = true
       this.applyPreferences()
+      void this.loadHostFsrsIfAvailable()
+    },
+
+    async loadHostFsrsIfAvailable() {
+      if (!isWailsAvailable()) {
+        return
+      }
+      const res = await hostSettingsRepository.fetchDefaultFsrsParameter()
+      if (res.ok) {
+        this.hostFsrsParameter = res.data
+      }
     },
     persist() {
       savePreferences(this.preferences)

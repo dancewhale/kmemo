@@ -1,9 +1,16 @@
 import { defineStore } from 'pinia'
 import { router } from '@/app/router'
 import { ROUTE_NAMES } from '@/shared/constants/routes'
+import { isWailsAvailable } from '@/api/wails'
 import { mockReviewItems } from '@/mock/review'
+import { useToast } from '@/shared/composables/useToast'
 import { useWorkspaceStore } from '@/modules/workspace/stores/workspace.store'
-import { buildReviewRecord, buildReviewStats, normalizeReviewItem } from '../services/review.mapper'
+import * as reviewRepository from '../services/review.repository'
+import {
+  buildReviewRecord,
+  buildReviewStats,
+  normalizeReviewItem,
+} from '../services/review.mapper'
 import type { ExtractItem } from '@/modules/extract/types'
 import type { ReviewGrade, ReviewItem, ReviewRecord, ReviewStats } from '../types'
 
@@ -63,16 +70,31 @@ export const useReviewStore = defineStore('review', {
   },
 
   actions: {
-    async initialize() {
-      if (this.initialized) {
+    async initialize(opts?: { force?: boolean }) {
+      if (this.initialized && !opts?.force) {
         return
       }
       this.loading = true
-      await Promise.resolve()
-      this.items = mockReviewItems.map((x) => normalizeReviewItem(x))
-      this.initialized = true
-      this.loading = false
-      this.openFirstAvailable()
+      const toast = useToast()
+      try {
+        if (isWailsAvailable()) {
+          const res = await reviewRepository.fetchDueReviewItems(null, 80)
+          if (res.ok) {
+            this.items = res.data
+            this.sessionCompletedIds = []
+          } else {
+            toast.warning(res.error.message || '无法加载复习队列')
+            this.items = mockReviewItems.map((x) => normalizeReviewItem(x))
+          }
+        } else {
+          await Promise.resolve()
+          this.items = mockReviewItems.map((x) => normalizeReviewItem(x))
+        }
+      } finally {
+        this.initialized = true
+        this.loading = false
+        this.openFirstAvailable()
+      }
     },
 
     setSelectedItem(id: string | null) {
@@ -86,25 +108,38 @@ export const useReviewStore = defineStore('review', {
         return
       }
       this.submitting = true
-      await new Promise((resolve) => window.setTimeout(resolve, 220))
+      const toast = useToast()
       const now = new Date().toISOString()
-      this.records.unshift(buildReviewRecord(current.id, grade, now))
-
-      const idx = this.items.findIndex((item) => item.id === current.id)
-      if (idx >= 0) {
-        this.items[idx] = {
-          ...this.items[idx],
-          reviewCount: this.items[idx].reviewCount + 1,
-          lastReviewedAt: now,
+      try {
+        if (isWailsAvailable() && current.type === 'card' && current.cardId) {
+          const res = await reviewRepository.submitHostReview(current.cardId, grade)
+          if (!res.ok) {
+            toast.warning(res.error.message || '提交复习失败')
+            return
+          }
+        } else {
+          await new Promise((resolve) => window.setTimeout(resolve, 220))
         }
-      }
 
-      if (!this.sessionCompletedIds.includes(current.id)) {
-        this.sessionCompletedIds.push(current.id)
-      }
+        this.records.unshift(buildReviewRecord(current.id, grade, now))
 
-      this.submitting = false
-      this.openNext()
+        const idx = this.items.findIndex((item) => item.id === current.id)
+        if (idx >= 0) {
+          this.items[idx] = {
+            ...this.items[idx],
+            reviewCount: this.items[idx].reviewCount + 1,
+            lastReviewedAt: now,
+          }
+        }
+
+        if (!this.sessionCompletedIds.includes(current.id)) {
+          this.sessionCompletedIds.push(current.id)
+        }
+
+        this.openNext()
+      } finally {
+        this.submitting = false
+      }
     },
 
     openFirstAvailable() {

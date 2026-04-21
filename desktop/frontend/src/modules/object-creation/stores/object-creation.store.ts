@@ -7,6 +7,9 @@ import { useExtractStore } from '@/modules/extract/stores/extract.store'
 import { useReaderStore } from '@/modules/reader/stores/reader.store'
 import { useReviewStore } from '@/modules/review/stores/review.store'
 import { useSearchStore } from '@/modules/search/stores/search.store'
+import { isWailsAvailable } from '@/api/wails'
+import * as knowledgeRepository from '@/modules/knowledge-tree/services/knowledge.repository'
+import * as cardRepository from '@/modules/card/services/card.repository'
 import { useTreeStore } from '@/modules/knowledge-tree/stores/tree.store'
 import { useWorkspaceStore } from '@/modules/workspace/stores/workspace.store'
 import { buildReviewItemFromCard } from '@/modules/review/services/review.mapper'
@@ -207,9 +210,23 @@ export const useObjectCreationStore = defineStore('object-creation', {
       try {
         const tree = useTreeStore()
         await tree.initialize()
-        const id = createEntityId('kn-topic')
-        const node = buildTreeNodeFromCreateNodeInput(this.draft.node, id)
-        tree.addNode(node)
+        if (isWailsAvailable()) {
+          const res = await knowledgeRepository.createKnowledgeSpace(
+            this.draft.node.title.trim(),
+            this.draft.node.content.trim(),
+            this.draft.node.parentNodeId,
+          )
+          if (!res.ok) {
+            toast.warning(res.error.message ?? '创建知识库失败')
+            return
+          }
+          await tree.initialize({ force: true })
+          tree.setSelectedNode(res.data)
+        } else {
+          const id = createEntityId('kn-topic')
+          const node = buildTreeNodeFromCreateNodeInput(this.draft.node, id)
+          tree.addNode(node)
+        }
         await this.goKnowledge()
         refreshSearchIndex()
         toast.success('Node created')
@@ -236,31 +253,75 @@ export const useObjectCreationStore = defineStore('object-creation', {
         const review = useReviewStore()
         const cardStore = useCardStore()
         await Promise.all([tree.initialize(), cardStore.initialize()])
-        const nodeId = createEntityId('kn-card')
-        const kn = buildTreeNodeFromCreateCardInput(this.draft.card, nodeId)
-        tree.addNode(kn)
-        const cardId = createEntityId('card')
-        const cardItem: CardItem = {
-          id: cardId,
-          nodeId: kn.id,
-          title: kn.title,
-          prompt: this.draft.card.prompt.trim(),
-          answer: this.draft.card.answer.trim(),
-          parentNodeId: this.draft.card.parentNodeId,
-          createdAt: kn.createdAt ?? new Date().toISOString(),
-          updatedAt: kn.updatedAt ?? new Date().toISOString(),
-          reviewItemId: null,
-        }
-        cardStore.addCard(cardItem)
-        if (this.draft.card.addToReview) {
-          await review.initialize()
-          const revId = createEntityId('rev')
-          const item = buildReviewItemFromCard(cardItem, revId)
-          review.addReviewItem(item, { select: false })
-          cardStore.attachReviewItem(cardItem.id, revId)
-          toast.success('Card added to review')
+
+        if (isWailsAvailable()) {
+          const knowledgeId =
+            this.draft.card.parentNodeId ??
+            tree.rawNodes.find((n) => n.parentId == null)?.id ??
+            null
+          if (!knowledgeId) {
+            toast.warning('请选择父级知识库节点')
+            return
+          }
+          const res = await cardRepository.createCardFromInput(this.draft.card, knowledgeId)
+          if (!res.ok) {
+            toast.warning(res.error.message ?? '创建卡片失败')
+            return
+          }
+          const newId = res.data
+          await tree.initialize({ force: true })
+          const displayTitle =
+            this.draft.card.title.trim() ||
+            (this.draft.card.prompt.trim() ? this.draft.card.prompt.trim().slice(0, 48) : 'Card')
+          tree.appendHostCardNode({
+            id: newId,
+            parentId: this.draft.card.parentNodeId ?? knowledgeId,
+            title: displayTitle,
+          })
+          const cardItem: CardItem = {
+            id: newId,
+            nodeId: newId,
+            title: displayTitle.startsWith('Card:') ? displayTitle : `Card: ${displayTitle}`,
+            prompt: this.draft.card.prompt.trim(),
+            answer: this.draft.card.answer.trim(),
+            parentNodeId: this.draft.card.parentNodeId ?? knowledgeId,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            reviewItemId: null,
+          }
+          cardStore.addCard(cardItem)
+          if (this.draft.card.addToReview) {
+            toast.success('Card created — FSRS will schedule review')
+          } else {
+            toast.success('Card created')
+          }
         } else {
-          toast.success('Card created')
+          const nodeId = createEntityId('kn-card')
+          const kn = buildTreeNodeFromCreateCardInput(this.draft.card, nodeId)
+          tree.addNode(kn)
+          const cardId = createEntityId('card')
+          const cardItem: CardItem = {
+            id: cardId,
+            nodeId: kn.id,
+            title: kn.title,
+            prompt: this.draft.card.prompt.trim(),
+            answer: this.draft.card.answer.trim(),
+            parentNodeId: this.draft.card.parentNodeId,
+            createdAt: kn.createdAt ?? new Date().toISOString(),
+            updatedAt: kn.updatedAt ?? new Date().toISOString(),
+            reviewItemId: null,
+          }
+          cardStore.addCard(cardItem)
+          if (this.draft.card.addToReview) {
+            await review.initialize()
+            const revId = createEntityId('rev')
+            const item = buildReviewItemFromCard(cardItem, revId)
+            review.addReviewItem(item, { select: false })
+            cardStore.attachReviewItem(cardItem.id, revId)
+            toast.success('Card added to review')
+          } else {
+            toast.success('Card created')
+          }
         }
         await this.goKnowledge()
         refreshSearchIndex()
