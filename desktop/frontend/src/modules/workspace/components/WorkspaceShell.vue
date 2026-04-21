@@ -7,9 +7,9 @@ import CenterPane from './CenterPane.vue'
 import RightPane from './RightPane.vue'
 import BottomStatusBar from './BottomStatusBar.vue'
 import AppSplitter from '@/shared/components/AppSplitter.vue'
-import { mockArticles } from '@/mock/articles'
-import { mockKnowledgeNodes } from '@/mock/tree'
-import { mockReviewItems } from '@/mock/review'
+import { useTreeStore } from '@/modules/knowledge-tree/stores/tree.store'
+import { useReaderStore } from '@/modules/reader/stores/reader.store'
+import { useReviewStore } from '@/modules/review/stores/review.store'
 
 const props = defineProps<{
   context: WorkspaceContext
@@ -19,30 +19,24 @@ const store = useWorkspaceStore()
 
 const COLLAPSED_RAIL = 48
 
-function applyContext(ctx: WorkspaceContext) {
+async function applyContext(ctx: WorkspaceContext) {
   store.setContext(ctx)
   if (ctx === 'reading') {
-    const cur = mockArticles.find((a) => a.id === store.selectedArticleId)
-    if (!cur) {
-      store.selectArticle(mockArticles[0]?.id ?? null)
-    }
+    const reader = useReaderStore()
+    await reader.ensureReadyWithSelection(store.selectedArticleId)
   } else if (ctx === 'inbox') {
-    const pending = mockArticles.filter((a) => a.status === 'pending')
-    const cur = pending.find((a) => a.id === store.selectedArticleId)
-    if (!cur) {
-      store.selectArticle(pending[0]?.id ?? null)
-    }
+    const reader = useReaderStore()
+    await reader.initialize()
+    const inbox = reader.inboxArticles
+    const preferred = store.selectedArticleId
+    const still = preferred && inbox.some((a) => a.id === preferred)
+    reader.setSelectedArticle(still ? preferred : inbox[0]?.id ?? null)
   } else if (ctx === 'knowledge') {
-    const nodes = mockKnowledgeNodes.filter((n) => n.type !== 'folder')
-    const cur = nodes.find((n) => n.id === store.selectedNodeId)
-    if (!cur) {
-      store.selectNode(nodes[0]?.id ?? null)
-    }
+    const tree = useTreeStore()
+    await tree.ensureReadyWithSelection(store.selectedNodeId)
   } else if (ctx === 'review') {
-    const cur = mockReviewItems.find((r) => r.id === store.selectedReviewId)
-    if (!cur) {
-      store.selectReview(mockReviewItems[0]?.id ?? null)
-    }
+    const review = useReviewStore()
+    await review.ensureReadyWithSelection(store.selectedReviewId)
   } else if (ctx === 'search') {
     store.selectArticle(null)
     store.selectNode(null)
@@ -52,7 +46,9 @@ function applyContext(ctx: WorkspaceContext) {
 
 watch(
   () => props.context,
-  (c) => applyContext(c),
+  (c) => {
+    void applyContext(c)
+  },
   { immediate: true },
 )
 </script>
@@ -60,27 +56,31 @@ watch(
 <template>
   <div class="workspace-shell">
     <div class="workspace-shell__row">
-      <LeftSidebar
-        class="workspace-shell__left"
-        :style="{
-          width: (store.isLeftCollapsed ? COLLAPSED_RAIL : store.leftPaneWidth) + 'px',
-        }"
-      />
-      <AppSplitter orientation="vertical" @drag="store.bumpLeftWidth($event)" />
+      <template v-if="store.showLeftPane">
+        <LeftSidebar
+          class="workspace-shell__left"
+          :style="{
+            width: (store.isLeftCollapsed ? COLLAPSED_RAIL : store.leftPaneWidth) + 'px',
+          }"
+        />
+        <AppSplitter orientation="vertical" @drag="store.bumpLeftWidth($event)" />
+      </template>
       <CenterPane class="workspace-shell__center" />
       <template v-if="!store.isRightCollapsed">
         <AppSplitter orientation="vertical" @drag="store.bumpRightWidth($event)" />
         <RightPane class="workspace-shell__right" :style="{ width: store.rightPaneWidth + 'px' }" />
       </template>
     </div>
-    <AppSplitter orientation="horizontal" @drag="store.bumpBottomHeight($event)" />
-    <BottomStatusBar
-      class="workspace-shell__status"
-      :style="{
-        height: store.bottomPaneHeight + 'px',
-        minHeight: store.bottomPaneHeight + 'px',
-      }"
-    />
+    <template v-if="store.showBottomStatusBar">
+      <AppSplitter orientation="horizontal" @drag="store.bumpBottomHeight($event)" />
+      <BottomStatusBar
+        class="workspace-shell__status"
+        :style="{
+          height: store.bottomPaneHeight + 'px',
+          minHeight: store.bottomPaneHeight + 'px',
+        }"
+      />
+    </template>
   </div>
 </template>
 

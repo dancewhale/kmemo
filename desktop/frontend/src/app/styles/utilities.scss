@@ -1,0 +1,53 @@
+@use 'variables' as *;
+
+.u-text-subtle {
+  color: $color-text-secondary;
+}
+
+.u-text-muted {
+  color: $color-text-muted;
+}
+
+.u-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.u-scroll-y {
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.u-compact-row {
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+}
+
+.u-interactive-item {
+  border: 1px solid transparent;
+  border-radius: $radius-sm;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.u-interactive-item:hover {
+  background: $color-hover;
+}
+
+.u-interactive-item--selected {
+  background: $color-active;
+  border-color: $color-active-border;
+}
+
+.u-visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}

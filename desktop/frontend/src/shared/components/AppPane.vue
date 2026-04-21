@@ -7,11 +7,13 @@ const props = withDefaults(
     bordered?: boolean
     scrollable?: boolean
     padded?: boolean | 'none' | 'sm' | 'md'
+    compact?: boolean
   }>(),
   {
     bordered: true,
     scrollable: true,
     padded: 'md',
+    compact: false,
   },
 )
 
@@ -29,7 +31,11 @@ const padClass = computed(() => {
 <template>
   <section
     class="app-pane"
-    :class="{ 'app-pane--bordered': bordered, 'app-pane--scroll': scrollable }"
+    :class="{
+      'app-pane--bordered': bordered,
+      'app-pane--scroll': scrollable,
+      'app-pane--compact': compact,
+    }"
   >
     <header v-if="title || $slots.header" class="app-pane__header">
       <slot name="header">
@@ -73,6 +79,10 @@ const padClass = computed(() => {
   font-weight: 600;
   color: $color-text-secondary;
   letter-spacing: 0.02em;
+}
+
+.app-pane--compact .app-pane__header {
+  padding: $space-xs $space-sm;
 }
 
 .app-pane__title {

@@ -1,0 +1,47 @@
+/** Action ids for context menu executor / registry (single source of truth). */
+export const CONTEXT_ACTION_IDS = {
+  tree: {
+    openNode: 'open-node',
+    renameNode: 'rename-node',
+    newChildNode: 'new-child-node',
+    newCardUnderNode: 'new-card-under-node',
+    newManualExtractUnderNode: 'new-manual-extract-under-node',
+    createReview: 'create-review-from-node',
+    revealNode: 'reveal-node',
+    deleteNode: 'delete-node',
+    cardAddToReview: 'tree-card-add-to-review',
+    cardOpenReview: 'tree-card-open-review',
+  },
+  article: {
+    openArticle: 'open-article',
+    openInReading: 'open-article-reading',
+    createExtractFromSelection: 'create-extract-from-selection',
+    markReading: 'mark-article-reading',
+    markProcessed: 'mark-article-processed',
+    revealRelatedExtracts: 'reveal-related-extracts',
+    createManualFromArticle: 'article-create-manual-extract',
+    createCardFromArticle: 'article-create-card',
+  },
+  extract: {
+    openExtract: 'open-extract',
+    backToSource: 'back-to-source-article',
+    revealInTree: 'reveal-extract-in-tree',
+    addToReview: 'add-extract-to-review',
+    openReviewItem: 'open-extract-review-item',
+    copyQuote: 'copy-extract-quote',
+    deleteExtract: 'delete-extract',
+  },
+  search: {
+    openResult: 'open-search-result',
+    revealResult: 'reveal-search-result',
+    copyTitle: 'copy-search-title',
+  },
+  review: {
+    openItem: 'open-review-item',
+    openSourceArticle: 'open-review-source-article',
+    openExtract: 'open-review-extract',
+    openCard: 'open-review-card',
+    markReviewed: 'mark-review-reviewed',
+    removeFromQueue: 'remove-review-item',
+  },
+} as const

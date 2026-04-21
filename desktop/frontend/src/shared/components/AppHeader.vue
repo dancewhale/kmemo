@@ -1,12 +1,18 @@
 <script setup lang="ts">
-defineProps<{
-  title: string
-  subtitle?: string
-}>()
+withDefaults(
+  defineProps<{
+    title: string
+    subtitle?: string
+    compact?: boolean
+  }>(),
+  {
+    compact: false,
+  },
+)
 </script>
 
 <template>
-  <header class="app-header">
+  <header class="app-header" :class="{ 'app-header--compact': compact }">
     <div class="app-header__titles">
       <span class="app-header__title">{{ title }}</span>
       <span v-if="subtitle" class="app-header__subtitle">{{ subtitle }}</span>
@@ -27,6 +33,11 @@ defineProps<{
   gap: $space-md;
   height: $header-height;
   padding: 0 $space-lg;
+}
+
+.app-header--compact {
+  height: 28px;
+  padding: 0 $space-md;
 }
 
 .app-header__titles {

@@ -2,19 +2,29 @@
 import { computed } from 'vue'
 import { useWorkspaceStore } from '../stores/workspace.store'
 import { mockArticles } from '@/mock/articles'
-import { mockKnowledgeNodes } from '@/mock/tree'
-import { mockReviewItems } from '@/mock/review'
+import { useTreeStore } from '@/modules/knowledge-tree/stores/tree.store'
+import { useReaderStore } from '@/modules/reader/stores/reader.store'
+import { useReviewStore } from '@/modules/review/stores/review.store'
+import { useSettingsStore } from '@/modules/settings/stores/settings.store'
 
 const store = useWorkspaceStore()
+const tree = useTreeStore()
+const reader = useReaderStore()
+const review = useReviewStore()
+const settings = useSettingsStore()
 
 const selectionLabel = computed(() => {
   if (store.currentContext === 'knowledge') {
-    const n = mockKnowledgeNodes.find((x) => x.id === store.selectedNodeId)
+    const n = tree.selectedNode
     return n ? `${n.id} · ${n.title}` : '—'
   }
   if (store.currentContext === 'review') {
-    const r = mockReviewItems.find((x) => x.id === store.selectedReviewId)
+    const r = review.selectedItem
     return r ? `${r.id} · ${r.title}` : '—'
+  }
+  if (store.currentContext === 'reading') {
+    const a = reader.selectedArticle
+    return a ? `${a.id} · ${a.title}` : '—'
   }
   const a = mockArticles.find((x) => x.id === store.selectedArticleId)
   return a ? `${a.id} · ${a.title}` : '—'
@@ -53,7 +63,9 @@ function toggleRight() {
     <span class="bottom-status__seg">Sync: {{ syncLabel }}</span>
     <button type="button" class="bottom-status__btn" @click="cycleSync">Mock sync</button>
     <span class="bottom-status__grow" />
-    <span class="bottom-status__hints kmono">⌘1 nav · ⌘K search (stub)</span>
+    <span v-if="settings.workspacePreferences.showShortcutHints" class="bottom-status__hints kmono">
+      ⌘/Ctrl+K commands · Alt+1..5 navigate · g r/k/v jump
+    </span>
     <button type="button" class="bottom-status__btn" @click="toggleRight">
       {{ store.isRightCollapsed ? 'Show detail' : 'Hide detail' }}
     </button>
@@ -70,7 +82,7 @@ function toggleRight() {
   padding: 0 $space-md;
   font-size: $font-size-xs;
   color: $color-text-secondary;
-  background: $color-bg-pane;
+  background: $color-bg-subtle;
   border-top: 1px solid $color-border-subtle;
   min-width: 0;
 }

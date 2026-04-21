@@ -2,15 +2,14 @@
 </script>
 
 <template>
-  <div class="dark">
+  <div class="app-root">
     <router-view />
   </div>
 </template>
 
 <style scoped>
-.dark {
+.app-root {
   height: 100%;
   min-height: 0;
-  color-scheme: dark;
 }
 </style>

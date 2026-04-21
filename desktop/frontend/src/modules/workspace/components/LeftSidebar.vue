@@ -11,6 +11,8 @@ import {
 } from '@element-plus/icons-vue'
 import { useWorkspaceStore } from '../stores/workspace.store'
 import AppIconButton from '@/shared/components/AppIconButton.vue'
+import CaptureQuickEntry from '@/modules/inbox-capture/components/CaptureQuickEntry.vue'
+import CreateQuickEntry from '@/modules/object-creation/components/CreateQuickEntry.vue'
 import { ROUTE_PATHS } from '@/shared/constants/routes'
 
 const route = useRoute()
@@ -51,6 +53,11 @@ function goSettings() {
         <span v-if="!store.isLeftCollapsed" class="left-sidebar__text">{{ it.label }}</span>
       </RouterLink>
     </nav>
+    <div class="left-sidebar__capture">
+      <CaptureQuickEntry :compact="true" />
+      <CreateQuickEntry :compact="true" />
+      <span v-if="!store.isLeftCollapsed" class="left-sidebar__capture-text">Inbox / New</span>
+    </div>
     <div class="left-sidebar__footer">
       <AppIconButton
         :label="store.isLeftCollapsed ? 'Expand sidebar' : 'Collapse sidebar'"
@@ -102,6 +109,24 @@ function goSettings() {
   padding: $space-sm 0;
 }
 
+.left-sidebar__capture {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  padding: $space-xs $space-sm;
+  border-top: 1px solid $color-border-subtle;
+}
+
+.left-sidebar__capture-text {
+  font-size: $font-size-xs;
+  font-weight: 600;
+  color: $color-text-secondary;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .left-sidebar__link {
   display: flex;
   align-items: center;
@@ -112,6 +137,7 @@ function goSettings() {
   font-size: $font-size-sm;
   color: $color-text-secondary;
   line-height: $line-tight;
+  box-shadow: none;
 }
 
 .left-sidebar__link:hover {
@@ -123,6 +149,7 @@ function goSettings() {
   background: $color-active;
   color: $color-text;
   border: 1px solid $color-active-border;
+  box-shadow: inset 2px 0 0 $color-primary;
 }
 
 .left-sidebar__ico {

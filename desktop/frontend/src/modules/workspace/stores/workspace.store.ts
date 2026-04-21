@@ -11,6 +11,7 @@ import {
   MIN_LEFT_PANE_WIDTH,
   MIN_RIGHT_PANE_WIDTH,
 } from '@/shared/constants/layout'
+import { WORKSPACE_LAST_CONTEXT_STORAGE_KEY } from '@/shared/constants/preferences'
 import { readLocalStorageJSON, writeLocalStorageJSON } from '@/shared/utils/storage'
 import type { PersistedWorkspaceLayout, WorkspaceContext } from '../types'
 
@@ -25,9 +26,11 @@ function loadPersistedLayout(): PersistedWorkspaceLayout | null {
 export const useWorkspaceStore = defineStore('workspace', {
   state: () => ({
     currentContext: 'reading' as WorkspaceContext,
+    showLeftPane: true,
     leftPaneWidth: DEFAULT_LEFT_PANE_WIDTH,
     rightPaneWidth: DEFAULT_RIGHT_PANE_WIDTH,
     bottomPaneHeight: DEFAULT_BOTTOM_PANE_HEIGHT,
+    showBottomStatusBar: true,
     isLeftCollapsed: false,
     isRightCollapsed: false,
     selectedArticleId: null as string | null,
@@ -38,10 +41,15 @@ export const useWorkspaceStore = defineStore('workspace', {
   actions: {
     setContext(ctx: WorkspaceContext) {
       this.currentContext = ctx
+      writeLocalStorageJSON(WORKSPACE_LAST_CONTEXT_STORAGE_KEY, ctx)
     },
 
     setLeftPaneWidth(w: number) {
       this.leftPaneWidth = clamp(w, MIN_LEFT_PANE_WIDTH, MAX_LEFT_PANE_WIDTH)
+    },
+
+    setShowLeftPane(v: boolean) {
+      this.showLeftPane = v
     },
 
     setRightPaneWidth(w: number) {
@@ -50,6 +58,10 @@ export const useWorkspaceStore = defineStore('workspace', {
 
     setBottomPaneHeight(h: number) {
       this.bottomPaneHeight = clamp(h, MIN_BOTTOM_PANE_HEIGHT, MAX_BOTTOM_PANE_HEIGHT)
+    },
+
+    setShowBottomStatusBar(v: boolean) {
+      this.showBottomStatusBar = v
     },
 
     setLeftCollapsed(v: boolean) {
@@ -84,6 +96,9 @@ export const useWorkspaceStore = defineStore('workspace', {
       if (typeof p.leftPaneWidth === 'number') {
         this.setLeftPaneWidth(p.leftPaneWidth)
       }
+      if (typeof p.showLeftPane === 'boolean') {
+        this.showLeftPane = p.showLeftPane
+      }
       if (typeof p.rightPaneWidth === 'number') {
         this.setRightPaneWidth(p.rightPaneWidth)
       }
@@ -96,13 +111,18 @@ export const useWorkspaceStore = defineStore('workspace', {
       if (typeof p.isRightCollapsed === 'boolean') {
         this.isRightCollapsed = p.isRightCollapsed
       }
+      if (typeof p.showBottomStatusBar === 'boolean') {
+        this.showBottomStatusBar = p.showBottomStatusBar
+      }
     },
 
     persistLayout() {
       const payload: PersistedWorkspaceLayout = {
+        showLeftPane: this.showLeftPane,
         leftPaneWidth: this.leftPaneWidth,
         rightPaneWidth: this.rightPaneWidth,
         bottomPaneHeight: this.bottomPaneHeight,
+        showBottomStatusBar: this.showBottomStatusBar,
         isLeftCollapsed: this.isLeftCollapsed,
         isRightCollapsed: this.isRightCollapsed,
       }

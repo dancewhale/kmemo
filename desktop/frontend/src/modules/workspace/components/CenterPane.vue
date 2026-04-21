@@ -1,34 +1,40 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useWorkspaceStore } from '../stores/workspace.store'
 import AppPane from '@/shared/components/AppPane.vue'
 import AppEmpty from '@/shared/components/AppEmpty.vue'
-import { mockArticles } from '@/mock/articles'
-import { mockKnowledgeNodes } from '@/mock/tree'
-import { mockReviewItems } from '@/mock/review'
+import TreePanel from '@/modules/knowledge-tree/components/TreePanel.vue'
+import ReaderList from '@/modules/reader/components/ReaderList.vue'
+import ReviewQueue from '@/modules/review/components/ReviewQueue.vue'
+import GlobalSearch from '@/modules/search/components/GlobalSearch.vue'
+import CaptureQuickEntry from '@/modules/inbox-capture/components/CaptureQuickEntry.vue'
+import { useReaderStore } from '@/modules/reader/stores/reader.store'
 
 const store = useWorkspaceStore()
+const reader = useReaderStore()
+const { inboxArticles } = storeToRefs(reader)
+
+onMounted(() => {
+  void reader.initialize()
+})
 
 const title = computed(() => {
   switch (store.currentContext) {
     case 'inbox':
       return 'Inbox'
     case 'reading':
-      return 'Reading queue'
+      return ''
     case 'knowledge':
-      return 'Knowledge outline'
+      return ''
     case 'review':
-      return 'Review queue'
+      return ''
     case 'search':
       return 'Search'
     default:
       return ''
   }
 })
-
-const inboxArticles = computed(() => mockArticles.filter((a) => a.status === 'pending'))
-
-const searchHits = computed(() => mockArticles.slice(0, 4))
 
 function formatShort(iso: string) {
   try {
@@ -41,76 +47,40 @@ function formatShort(iso: string) {
 
 <template>
   <AppPane :title="title" class="center-pane" :padded="'none'">
-    <div v-if="store.currentContext === 'reading'" class="center-pane__list">
-      <button
-        v-for="a in mockArticles"
-        :key="a.id"
-        type="button"
-        class="center-pane__row"
-        :class="{ 'center-pane__row--active': store.selectedArticleId === a.id }"
-        @click="store.selectArticle(a.id)"
-      >
-        <span class="center-pane__row-title">{{ a.title }}</span>
-        <span class="center-pane__meta">{{ a.sourceType }} · {{ formatShort(a.updatedAt) }}</span>
-      </button>
+    <div v-if="store.currentContext === 'reading'" class="center-pane__reader">
+      <ReaderList />
     </div>
 
-    <div v-else-if="store.currentContext === 'inbox'" class="center-pane__list">
-      <AppEmpty v-if="!inboxArticles.length" message="Inbox is clear" />
-      <button
-        v-for="a in inboxArticles"
-        :key="a.id"
-        type="button"
-        class="center-pane__row"
-        :class="{ 'center-pane__row--active': store.selectedArticleId === a.id }"
-        @click="store.selectArticle(a.id)"
-      >
+    <div v-else-if="store.currentContext === 'inbox'" class="center-pane__inbox">
+      <div class="center-pane__inbox-bar">
+        <CaptureQuickEntry />
+      </div>
+      <div class="center-pane__list">
+        <AppEmpty v-if="!inboxArticles.length" message="Inbox is clear" />
+        <button
+          v-for="a in inboxArticles"
+          :key="a.id"
+          type="button"
+          class="center-pane__row"
+          :class="{ 'center-pane__row--active': store.selectedArticleId === a.id }"
+          @click="reader.setSelectedArticle(a.id)"
+        >
         <span class="center-pane__row-title">{{ a.title }}</span>
         <span class="center-pane__meta">{{ a.status }} · {{ formatShort(a.updatedAt) }}</span>
-      </button>
+        </button>
+      </div>
     </div>
 
-    <div v-else-if="store.currentContext === 'knowledge'" class="center-pane__list">
-      <button
-        v-for="n in mockKnowledgeNodes"
-        :key="n.id"
-        type="button"
-        class="center-pane__row"
-        :class="{ 'center-pane__row--active': store.selectedNodeId === n.id }"
-        @click="store.selectNode(n.id)"
-      >
-        <span class="center-pane__row-title">{{ n.title }}</span>
-        <span class="center-pane__meta">{{ n.type }}{{ n.parentId ? ` · parent ${n.parentId}` : '' }}</span>
-      </button>
+    <div v-else-if="store.currentContext === 'knowledge'" class="center-pane__tree">
+      <TreePanel />
     </div>
 
-    <div v-else-if="store.currentContext === 'review'" class="center-pane__list">
-      <button
-        v-for="r in mockReviewItems"
-        :key="r.id"
-        type="button"
-        class="center-pane__row"
-        :class="{ 'center-pane__row--active': store.selectedReviewId === r.id }"
-        @click="store.selectReview(r.id)"
-      >
-        <span class="center-pane__row-title">{{ r.title }}</span>
-        <span class="center-pane__meta">{{ r.status }} · due {{ formatShort(r.dueAt) }}</span>
-      </button>
+    <div v-else-if="store.currentContext === 'review'" class="center-pane__review">
+      <ReviewQueue />
     </div>
 
-    <div v-else-if="store.currentContext === 'search'" class="center-pane__list">
-      <div class="center-pane__hint">Mock results for “incremental”</div>
-      <button
-        v-for="a in searchHits"
-        :key="a.id"
-        type="button"
-        class="center-pane__row"
-        :class="{ 'center-pane__row--active': store.selectedArticleId === a.id }"
-        @click="store.selectArticle(a.id)"
-      >
-        <span class="center-pane__row-title">{{ a.title }}</span>
-        <span class="center-pane__meta">{{ a.summary.slice(0, 72) }}…</span>
-      </button>
+    <div v-else-if="store.currentContext === 'search'" class="center-pane__search">
+      <GlobalSearch />
     </div>
   </AppPane>
 </template>
@@ -120,6 +90,24 @@ function formatShort(iso: string) {
 
 .center-pane {
   height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.center-pane__inbox {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.center-pane__inbox-bar {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: flex-end;
+  padding: $space-xs $space-sm;
+  border-bottom: 1px solid $color-border-subtle;
 }
 
 .center-pane__list {
@@ -127,6 +115,18 @@ function formatShort(iso: string) {
   flex-direction: column;
   gap: 1px;
   padding: $space-xs;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.center-pane__tree,
+.center-pane__reader,
+.center-pane__review,
+.center-pane__search {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
 }
 
 .center-pane__hint {

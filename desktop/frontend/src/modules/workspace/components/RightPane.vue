@@ -1,28 +1,124 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { useWorkspaceStore } from '../stores/workspace.store'
 import AppPane from '@/shared/components/AppPane.vue'
 import AppEmpty from '@/shared/components/AppEmpty.vue'
-import { mockArticles } from '@/mock/articles'
-import { mockKnowledgeNodes } from '@/mock/tree'
-import { mockReviewItems } from '@/mock/review'
+import { useTreeStore } from '@/modules/knowledge-tree/stores/tree.store'
+import { useReaderStore } from '@/modules/reader/stores/reader.store'
+import { useEditorStore } from '@/modules/editor/stores/editor.store'
+import { useExtractStore } from '@/modules/extract/stores/extract.store'
+import EditorShell from '@/modules/editor/components/EditorShell.vue'
+import ExtractDetailPanel from '@/modules/extract/components/ExtractDetailPanel.vue'
+import CardDetailPanel from '@/modules/card/components/CardDetailPanel.vue'
+import { useCardStore } from '@/modules/card/stores/card.store'
+import ReviewCard from '@/modules/review/components/ReviewCard.vue'
 
 const store = useWorkspaceStore()
+const tree = useTreeStore()
+const reader = useReaderStore()
+const editor = useEditorStore()
+const extract = useExtractStore()
+const card = useCardStore()
 
-const article = computed(() => mockArticles.find((a) => a.id === store.selectedArticleId) ?? null)
-const node = computed(() => mockKnowledgeNodes.find((n) => n.id === store.selectedNodeId) ?? null)
-const review = computed(() => mockReviewItems.find((r) => r.id === store.selectedReviewId) ?? null)
+onMounted(() => {
+  void reader.initialize()
+})
+
+const inboxArticle = computed(() => {
+  if (store.currentContext !== 'inbox') {
+    return null
+  }
+  const id = store.selectedArticleId
+  if (!id) {
+    return null
+  }
+  return reader.getArticleById(id)
+})
+const readingArticle = computed(() => (store.currentContext === 'reading' ? reader.selectedArticle : null))
+const activeEditorArticle = computed(() => {
+  if (store.currentContext === 'reading') {
+    return readingArticle.value
+  }
+  if (store.currentContext === 'inbox') {
+    return inboxArticle.value
+  }
+  return null
+})
+const kn = computed(() => (store.currentContext === 'knowledge' ? tree.selectedNode : null))
+const knChildCount = computed(() => (store.currentContext === 'knowledge' ? tree.selectedNodeChildCount : 0))
+const selectedExtract = computed(() => {
+  const extractId = kn.value?.sourceExtractId
+  if (!extractId) {
+    return null
+  }
+  return extract.items.find((item) => item.id === extractId) ?? null
+})
+const showExtractDetail = computed(() => {
+  return store.currentContext === 'knowledge' && tree.isSelectedExtractNode
+})
+
+const showCardDetail = computed(() => {
+  return store.currentContext === 'knowledge' && kn.value?.type === 'card'
+})
+
+watch(
+  () => [store.currentContext, tree.selectedNodeId] as const,
+  async ([ctx, nodeId]) => {
+    if (ctx !== 'knowledge' || !nodeId) {
+      return
+    }
+    const node = tree.findNodeById(nodeId)
+    if (node?.type === 'card') {
+      await card.initialize()
+      card.openCardByNodeId(node.id)
+    }
+  },
+  { immediate: true },
+)
+watch(
+  activeEditorArticle,
+  (doc) => {
+    if (!doc) {
+      editor.clearDocument()
+      return
+    }
+    editor.openDocument({
+      id: doc.id,
+      title: doc.title,
+      content: doc.content,
+      contentType: 'article',
+      updatedAt: doc.updatedAt,
+      sourceUrl: doc.sourceUrl,
+      tags: doc.tags,
+    })
+  },
+  { immediate: true },
+)
+
+watch(
+  () => tree.selectedNodeId,
+  async (nodeId) => {
+    await extract.initialize()
+    const node = tree.findNodeById(nodeId)
+    if (node?.type === 'extract' && node.sourceExtractId) {
+      extract.openExtract(node.sourceExtractId)
+    } else if (store.currentContext === 'knowledge') {
+      extract.setSelectedExtract(null)
+    }
+  },
+  { immediate: true },
+)
 
 const title = computed(() => {
   switch (store.currentContext) {
     case 'inbox':
-      return 'Inbox item'
+      return 'Inbox editor'
     case 'reading':
-      return 'Article'
+      return 'Editor'
     case 'knowledge':
-      return 'Node'
+      return 'Knowledge detail'
     case 'review':
-      return 'Review item'
+      return 'Review'
     case 'search':
       return 'Result detail'
     default:
@@ -32,56 +128,48 @@ const title = computed(() => {
 </script>
 
 <template>
-  <AppPane :title="title" class="right-pane" :scrollable="true">
+  <AppPane :title="title" class="right-pane" :scrollable="false" :padded="'none'">
     <template v-if="store.currentContext === 'reading' || store.currentContext === 'inbox'">
-      <AppEmpty v-if="!article" message="Select an article" />
-      <div v-else class="right-pane__block">
-        <h2 class="right-pane__h">{{ article.title }}</h2>
-        <p class="right-pane__p">{{ article.summary }}</p>
-        <dl class="right-pane__dl">
-          <div><dt>Id</dt><dd>{{ article.id }}</dd></div>
-          <div><dt>Source</dt><dd>{{ article.sourceType }}</dd></div>
-          <div><dt>Status</dt><dd>{{ article.status }}</dd></div>
-          <div><dt>Updated</dt><dd>{{ article.updatedAt }}</dd></div>
-        </dl>
-      </div>
+      <EditorShell />
     </template>
 
     <template v-else-if="store.currentContext === 'knowledge'">
-      <AppEmpty v-if="!node" message="Select a node" />
+      <AppEmpty v-if="!kn" message="Select a node in the tree" />
+      <ExtractDetailPanel v-else-if="showExtractDetail" />
+      <CardDetailPanel v-else-if="showCardDetail" />
       <div v-else class="right-pane__block">
-        <h2 class="right-pane__h">{{ node.title }}</h2>
+        <h2 class="right-pane__h">{{ kn.title }}</h2>
+        <template v-if="kn.description && (kn.type === 'topic' || kn.type === 'card')">
+          <p class="right-pane__label">Note</p>
+          <p class="right-pane__p">{{ kn.description }}</p>
+        </template>
+        <p v-if="selectedExtract" class="right-pane__label">Extract quote</p>
+        <p v-if="selectedExtract" class="right-pane__p right-pane__p--quote">“{{ selectedExtract.quote }}”</p>
+        <p v-if="selectedExtract?.note" class="right-pane__label">Note</p>
+        <p v-if="selectedExtract?.note" class="right-pane__p">{{ selectedExtract.note }}</p>
         <dl class="right-pane__dl">
-          <div><dt>Id</dt><dd>{{ node.id }}</dd></div>
-          <div><dt>Type</dt><dd>{{ node.type }}</dd></div>
-          <div><dt>Parent</dt><dd>{{ node.parentId ?? '—' }}</dd></div>
+          <div><dt>Id</dt><dd>{{ kn.id }}</dd></div>
+          <div><dt>Type</dt><dd>{{ kn.type }}</dd></div>
+          <div><dt>Parent</dt><dd>{{ kn.parentId ?? '—' }}</dd></div>
+          <div><dt>Child count</dt><dd>{{ knChildCount }}</dd></div>
+          <div v-if="selectedExtract"><dt>Source article</dt><dd>{{ selectedExtract.sourceArticleTitle }}</dd></div>
+          <div v-if="kn.createdAt"><dt>Created</dt><dd>{{ kn.createdAt }}</dd></div>
+          <div v-if="kn.updatedAt"><dt>Updated</dt><dd>{{ kn.updatedAt }}</dd></div>
         </dl>
       </div>
     </template>
 
     <template v-else-if="store.currentContext === 'review'">
-      <AppEmpty v-if="!review" message="Select a review item" />
-      <div v-else class="right-pane__block">
-        <h2 class="right-pane__h">{{ review.title }}</h2>
-        <p class="right-pane__label">Prompt</p>
-        <p class="right-pane__p">{{ review.prompt }}</p>
-        <dl class="right-pane__dl">
-          <div><dt>Id</dt><dd>{{ review.id }}</dd></div>
-          <div><dt>Due</dt><dd>{{ review.dueAt }}</dd></div>
-          <div><dt>Status</dt><dd>{{ review.status }}</dd></div>
-        </dl>
-      </div>
+      <ReviewCard />
     </template>
 
     <template v-else-if="store.currentContext === 'search'">
-      <div v-if="article" class="right-pane__block">
-        <h2 class="right-pane__h">{{ article.title }}</h2>
-        <p class="right-pane__p">{{ article.summary }}</p>
-      </div>
-      <div v-else class="right-pane__block">
+      <div class="right-pane__block">
+        <h2 class="right-pane__h">Search workspace</h2>
         <p class="right-pane__p">
-          Search is mock-only. Pick a result on the left to preview metadata here; host-backed index
-          comes later.
+          Use the center pane as the global search hub. Selecting a result jumps directly to the
+          target workflow (reading, knowledge, or review) so editing and review stay in their
+          native modules.
         </p>
       </div>
     </template>
@@ -119,6 +207,11 @@ const title = computed(() => {
   font-size: $font-size-sm;
   color: $color-text-secondary;
   line-height: $line-normal;
+}
+
+.right-pane__p--quote {
+  color: $color-text;
+  font-style: italic;
 }
 
 .right-pane__dl {

@@ -2,15 +2,17 @@
 withDefaults(
   defineProps<{
     label?: string
+    compact?: boolean
   }>(),
   {
     label: 'Loading…',
+    compact: false,
   },
 )
 </script>
 
 <template>
-  <div class="app-loading" role="status" :aria-label="label">
+  <div class="app-loading" role="status" :aria-label="label" :class="{ 'app-loading--compact': compact }">
     <span class="app-loading__dot" />
     <span class="app-loading__dot app-loading__dot--2" />
     <span class="app-loading__dot app-loading__dot--3" />
@@ -48,6 +50,10 @@ withDefaults(
 
 .app-loading__label {
   margin-left: $space-xs;
+}
+
+.app-loading--compact .app-loading__label {
+  font-size: $font-size-xs;
 }
 
 @keyframes app-loading-pulse {

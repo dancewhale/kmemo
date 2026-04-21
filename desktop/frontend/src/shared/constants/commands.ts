@@ -1,0 +1,28 @@
+export const COMMAND_IDS = {
+  goInbox: 'go-inbox',
+  goReading: 'go-reading',
+  goKnowledge: 'go-knowledge',
+  goReview: 'go-review',
+  goSearch: 'go-search',
+  focusSearch: 'focus-search',
+  openFirstReviewItem: 'open-first-review-item',
+  openSelectedArticle: 'open-selected-article',
+  createExtract: 'create-extract',
+  openSelectedExtract: 'open-selected-extract',
+  backToSourceArticle: 'back-to-source-article',
+  revealCurrentExtractInTree: 'reveal-current-extract-in-tree',
+  addCurrentCardToReview: 'add-current-card-to-review',
+  openCurrentCardReview: 'open-current-card-review',
+  addCurrentExtractToReview: 'add-current-extract-to-review',
+  openCurrentExtractReview: 'open-current-extract-review',
+  captureBlankArticle: 'capture-blank-article',
+  capturePasteText: 'capture-paste-text',
+  captureUrl: 'capture-url',
+  createNode: 'create-node',
+  createCard: 'create-card',
+  createManualExtract: 'create-manual-extract',
+  toggleCommandPalette: 'toggle-command-palette',
+  closeCommandPalette: 'close-command-palette',
+} as const
+
+export type CommandId = (typeof COMMAND_IDS)[keyof typeof COMMAND_IDS]
