@@ -1,0 +1,19 @@
+@use 'variables' as *;
+
+body {
+  font-family: $font-ui;
+  font-size: $font-size-md;
+  line-height: $line-normal;
+  color: $color-text;
+  background: $color-bg-app;
+  -webkit-font-smoothing: antialiased;
+}
+
+.kmono {
+  color: $color-text-secondary;
+  font-size: $font-size-xs;
+}
+
+.kaccent {
+  color: $color-primary;
+}
