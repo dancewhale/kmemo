@@ -128,7 +128,7 @@ const title = computed(() => {
 </script>
 
 <template>
-  <AppPane :title="title" class="right-pane" :scrollable="false" :padded="'none'">
+  <AppPane :title="title" class="read-pane" :scrollable="false" :padded="'none'">
     <template v-if="store.currentContext === 'reading' || store.currentContext === 'inbox'">
       <EditorShell />
     </template>
@@ -137,17 +137,17 @@ const title = computed(() => {
       <AppEmpty v-if="!kn" message="Select a node in the tree" />
       <ExtractDetailPanel v-else-if="showExtractDetail" />
       <CardDetailPanel v-else-if="showCardDetail" />
-      <div v-else class="right-pane__block">
-        <h2 class="right-pane__h">{{ kn.title }}</h2>
+      <div v-else class="read-pane__block">
+        <h2 class="read-pane__h">{{ kn.title }}</h2>
         <template v-if="kn.description && (kn.type === 'topic' || kn.type === 'card')">
-          <p class="right-pane__label">Note</p>
-          <p class="right-pane__p">{{ kn.description }}</p>
+          <p class="read-pane__label">Note</p>
+          <p class="read-pane__p">{{ kn.description }}</p>
         </template>
-        <p v-if="selectedExtract" class="right-pane__label">Extract quote</p>
-        <p v-if="selectedExtract" class="right-pane__p right-pane__p--quote">“{{ selectedExtract.quote }}”</p>
-        <p v-if="selectedExtract?.note" class="right-pane__label">Note</p>
-        <p v-if="selectedExtract?.note" class="right-pane__p">{{ selectedExtract.note }}</p>
-        <dl class="right-pane__dl">
+        <p v-if="selectedExtract" class="read-pane__label">Extract quote</p>
+        <p v-if="selectedExtract" class="read-pane__p read-pane__p--quote">“{{ selectedExtract.quote }}”</p>
+        <p v-if="selectedExtract?.note" class="read-pane__label">Note</p>
+        <p v-if="selectedExtract?.note" class="read-pane__p">{{ selectedExtract.note }}</p>
+        <dl class="read-pane__dl">
           <div><dt>Id</dt><dd>{{ kn.id }}</dd></div>
           <div><dt>Type</dt><dd>{{ kn.type }}</dd></div>
           <div><dt>Parent</dt><dd>{{ kn.parentId ?? '—' }}</dd></div>
@@ -164,10 +164,10 @@ const title = computed(() => {
     </template>
 
     <template v-else-if="store.currentContext === 'search'">
-      <div class="right-pane__block">
-        <h2 class="right-pane__h">Search workspace</h2>
-        <p class="right-pane__p">
-          Use the center pane as the global search hub. Selecting a result jumps directly to the
+      <div class="read-pane__block">
+        <h2 class="read-pane__h">Search workspace</h2>
+        <p class="read-pane__p">
+          Use the tree pane as the global search hub. Selecting a result jumps directly to the
           target workflow (reading, knowledge, or review) so editing and review stay in their
           native modules.
         </p>
@@ -179,22 +179,22 @@ const title = computed(() => {
 <style scoped lang="scss">
 @use '@/app/styles/variables.scss' as *;
 
-.right-pane {
+.read-pane {
   height: 100%;
 }
 
-.right-pane__block {
+.read-pane__block {
   padding: $space-md;
 }
 
-.right-pane__h {
+.read-pane__h {
   margin: 0 0 $space-md;
   font-size: $font-size-lg;
   font-weight: 600;
   line-height: $line-tight;
 }
 
-.right-pane__label {
+.read-pane__label {
   margin: 0 0 $space-xs;
   font-size: $font-size-xs;
   text-transform: uppercase;
@@ -202,25 +202,25 @@ const title = computed(() => {
   color: $color-text-secondary;
 }
 
-.right-pane__p {
+.read-pane__p {
   margin: 0 0 $space-md;
   font-size: $font-size-sm;
   color: $color-text-secondary;
   line-height: $line-normal;
 }
 
-.right-pane__p--quote {
+.read-pane__p--quote {
   color: $color-text;
   font-style: italic;
 }
 
-.right-pane__dl {
+.read-pane__dl {
   margin: 0;
   font-size: $font-size-xs;
   color: $color-text-secondary;
 }
 
-.right-pane__dl > div {
+.read-pane__dl > div {
   display: grid;
   grid-template-columns: 72px 1fr;
   gap: $space-sm;
@@ -228,12 +228,12 @@ const title = computed(() => {
   border-top: 1px solid $color-border-subtle;
 }
 
-.right-pane__dl dt {
+.read-pane__dl dt {
   margin: 0;
   color: $color-text-secondary;
 }
 
-.right-pane__dl dd {
+.read-pane__dl dd {
   margin: 0;
   color: $color-text;
   font-family: $font-mono;

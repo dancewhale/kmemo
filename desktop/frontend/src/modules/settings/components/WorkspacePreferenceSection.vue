@@ -36,23 +36,6 @@ const contexts: WorkspaceDefaultContext[] = [
       </select>
     </PreferenceField>
 
-    <PreferenceField label="Left pane width" description="Default width in workspace.">
-      <input
-        class="pref-range"
-        type="range"
-        min="140"
-        max="360"
-        :value="workspacePreferences.leftPaneWidth"
-        @input="
-          settings.updateWorkspacePreference(
-            'leftPaneWidth',
-            Number(($event.target as HTMLInputElement).value),
-          )
-        "
-      />
-      <span class="pref-value">{{ workspacePreferences.leftPaneWidth }}px</span>
-    </PreferenceField>
-
     <PreferenceField label="Right pane width" description="Default detail pane width.">
       <input
         class="pref-range"
@@ -68,19 +51,6 @@ const contexts: WorkspaceDefaultContext[] = [
         "
       />
       <span class="pref-value">{{ workspacePreferences.rightPaneWidth }}px</span>
-    </PreferenceField>
-
-    <PreferenceField label="Show left pane">
-      <input
-        type="checkbox"
-        :checked="workspacePreferences.showLeftPane"
-        @change="
-          settings.updateWorkspacePreference(
-            'showLeftPane',
-            ($event.target as HTMLInputElement).checked,
-          )
-        "
-      />
     </PreferenceField>
 
     <PreferenceField label="Show right pane">

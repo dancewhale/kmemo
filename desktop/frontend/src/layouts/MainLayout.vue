@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import AppHeader from '@/shared/components/AppHeader.vue'
+import WorkspaceNavMenu from '@/modules/workspace/components/WorkspaceNavMenu.vue'
 import AppFeedbackToast from '@/shared/components/AppFeedbackToast.vue'
 import { setupShortcuts } from '@/app/providers/shortcuts'
 import CommandPalette from '@/modules/command-center/components/CommandPalette.vue'
@@ -16,7 +17,11 @@ onMounted(() => {
 <template>
   <div class="main-layout">
     <div class="main-layout__chrome">
-      <AppHeader title="kmemo" subtitle="Progressive reading shell" />
+      <AppHeader title="kmemo" subtitle="Progressive reading shell">
+        <template #actions>
+          <WorkspaceNavMenu />
+        </template>
+      </AppHeader>
     </div>
     <div class="main-layout__body">
       <router-view />

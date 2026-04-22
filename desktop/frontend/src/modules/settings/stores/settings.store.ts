@@ -159,10 +159,7 @@ export const useSettingsStore = defineStore('settings', {
     applyPreferences() {
       const workspace = useWorkspaceStore()
       const pref = this.preferences.workspace
-      workspace.setShowLeftPane(pref.showLeftPane)
-      workspace.setLeftPaneWidth(pref.leftPaneWidth)
       workspace.setRightPaneWidth(pref.rightPaneWidth)
-      workspace.setLeftCollapsed(!pref.showLeftPane)
       workspace.setRightCollapsed(!pref.showRightPane)
       workspace.setShowBottomStatusBar(pref.showBottomStatusBar)
       workspace.persistLayout()

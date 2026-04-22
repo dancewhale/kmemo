@@ -2,9 +2,8 @@
 import { watch } from 'vue'
 import { useWorkspaceStore } from '../stores/workspace.store'
 import type { WorkspaceContext } from '../types'
-import LeftSidebar from './LeftSidebar.vue'
-import CenterPane from './CenterPane.vue'
-import RightPane from './RightPane.vue'
+import TreePane from './TreePane.vue'
+import ReadPane from './ReadPane.vue'
 import BottomStatusBar from './BottomStatusBar.vue'
 import AppSplitter from '@/shared/components/AppSplitter.vue'
 import { useTreeStore } from '@/modules/knowledge-tree/stores/tree.store'
@@ -16,8 +15,6 @@ const props = defineProps<{
 }>()
 
 const store = useWorkspaceStore()
-
-const COLLAPSED_RAIL = 48
 
 async function applyContext(ctx: WorkspaceContext) {
   store.setContext(ctx)
@@ -56,19 +53,10 @@ watch(
 <template>
   <div class="workspace-shell">
     <div class="workspace-shell__row">
-      <template v-if="store.showLeftPane">
-        <LeftSidebar
-          class="workspace-shell__left"
-          :style="{
-            width: (store.isLeftCollapsed ? COLLAPSED_RAIL : store.leftPaneWidth) + 'px',
-          }"
-        />
-        <AppSplitter orientation="vertical" @drag="store.bumpLeftWidth($event)" />
-      </template>
-      <CenterPane class="workspace-shell__center" />
+      <TreePane class="workspace-shell__center" />
       <template v-if="!store.isRightCollapsed">
         <AppSplitter orientation="vertical" @drag="store.bumpRightWidth($event)" />
-        <RightPane class="workspace-shell__right" :style="{ width: store.rightPaneWidth + 'px' }" />
+        <ReadPane class="workspace-shell__right" :style="{ width: store.rightPaneWidth + 'px' }" />
       </template>
     </div>
     <template v-if="store.showBottomStatusBar">
@@ -100,11 +88,6 @@ watch(
   flex: 1 1 auto;
   min-height: 0;
   min-width: 0;
-}
-
-.workspace-shell__left {
-  flex: 0 0 auto;
-  min-height: 0;
 }
 
 .workspace-shell__center {

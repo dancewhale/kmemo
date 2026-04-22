@@ -6,9 +6,7 @@ export type ThemeMode = 'light' | 'dark' | 'system'
 
 export interface WorkspacePreferences {
   defaultContext: WorkspaceDefaultContext
-  leftPaneWidth: number
   rightPaneWidth: number
-  showLeftPane: boolean
   showRightPane: boolean
   showBottomStatusBar: boolean
   restoreLastContextOnLaunch: boolean
