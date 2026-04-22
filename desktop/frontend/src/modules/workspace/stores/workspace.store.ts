@@ -4,7 +4,6 @@ import {
   DEFAULT_RIGHT_PANE_WIDTH,
   LAYOUT_STORAGE_KEY,
   MAX_BOTTOM_PANE_HEIGHT,
-  MAX_RIGHT_PANE_WIDTH,
   MIN_BOTTOM_PANE_HEIGHT,
   MIN_RIGHT_PANE_WIDTH,
 } from '@/shared/constants/layout'
@@ -40,7 +39,8 @@ export const useWorkspaceStore = defineStore('workspace', {
     },
 
     setRightPaneWidth(w: number) {
-      this.rightPaneWidth = clamp(w, MIN_RIGHT_PANE_WIDTH, MAX_RIGHT_PANE_WIDTH)
+      const v = Number.isFinite(w) ? w : MIN_RIGHT_PANE_WIDTH
+      this.rightPaneWidth = Math.max(MIN_RIGHT_PANE_WIDTH, v)
     },
 
     setBottomPaneHeight(h: number) {

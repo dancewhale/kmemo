@@ -36,12 +36,15 @@ const contexts: WorkspaceDefaultContext[] = [
       </select>
     </PreferenceField>
 
-    <PreferenceField label="Right pane width" description="Default detail pane width.">
+    <PreferenceField
+      label="Right pane width"
+      description="Default ReadPane width in pixels. Minimum 200; no upper limit."
+    >
       <input
-        class="pref-range"
-        type="range"
+        class="pref-number"
+        type="number"
         min="200"
-        max="520"
+        step="10"
         :value="workspacePreferences.rightPaneWidth"
         @input="
           settings.updateWorkspacePreference(
@@ -134,6 +137,16 @@ const contexts: WorkspaceDefaultContext[] = [
 
 .pref-range {
   width: 180px;
+}
+
+.pref-number {
+  width: 96px;
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  background: $color-bg-pane-elevated;
+  color: $color-text;
+  padding: 3px 8px;
+  font-size: $font-size-xs;
 }
 
 .pref-value {
