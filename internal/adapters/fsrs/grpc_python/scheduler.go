@@ -173,3 +173,27 @@ func (s *Scheduler) OptimizeParameters(ctx context.Context, in fsrs.OptimizePara
 
 	return OptimizedSettingToModel(in.ResultID, in.ResultName, resp.GetOptimizedSetting())
 }
+
+// GetBuiltinDefaultParameters implements fsrs.FSRSScheduler.
+func (s *Scheduler) GetBuiltinDefaultParameters(ctx context.Context) (*fsrs.BuiltinDefaultParameters, error) {
+	if s == nil || s.api == nil {
+		return nil, fsrs.ErrUnavailable
+	}
+	resp, err := s.api.GetDefaultFsrsParameters(ctx, &kmemov1.GetDefaultFsrsParametersRequest{})
+	if err != nil {
+		return nil, err
+	}
+	if resp == nil || resp.GetBuiltinSetting() == nil {
+		return nil, fmt.Errorf("fsrs: empty GetDefaultFsrsParameters response")
+	}
+	set := resp.GetBuiltinSetting()
+	out := &fsrs.BuiltinDefaultParameters{
+		Parameters:       append([]float64(nil), set.GetParameters()...),
+		DesiredRetention: set.GetDesiredRetention(),
+		FSRSPackageVersion: resp.GetFsrsPackageVersion(),
+	}
+	if set.MaximumInterval != nil {
+		out.MaximumInterval = int(set.GetMaximumInterval())
+	}
+	return out, nil
+}

@@ -156,6 +156,23 @@ def _optimizer_request() -> kmemo_pb2.OptimizeParametersRequest:
     )
 
 
+def test_get_default_fsrs_parameters_ignores_runtime_override():
+    fsrs_service.scheduler_set_setting(
+        kmemo_pb2.SchedulerSetSettingRequest(
+            setting=kmemo_pb2.SchedulerSetting(
+                parameters=_VALID_PARAMETERS,
+                desired_retention=0.5,
+                maximum_interval=42,
+            )
+        )
+    )
+    response = fsrs_service.get_default_fsrs_parameters(kmemo_pb2.GetDefaultFsrsParametersRequest())
+
+    assert list(response.builtin_setting.parameters) == _VALID_PARAMETERS
+    assert response.builtin_setting.desired_retention == fsrs_service._DEFAULT_DESIRED_RETENTION
+    assert response.builtin_setting.maximum_interval == fsrs_service._DEFAULT_MAXIMUM_INTERVAL
+
+
 def test_review_card_works_without_setting():
     response = fsrs_service.review_card(_review_request())
 

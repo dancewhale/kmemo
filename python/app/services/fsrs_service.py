@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 import hashlib
+import importlib.metadata
 import json
 import threading
 from dataclasses import dataclass
@@ -154,6 +155,28 @@ def scheduler_set_setting(
     return kmemo_pb2.SchedulerSetSettingResponse(
         effective_setting=_setting_to_proto(effective),
     )
+
+
+def get_default_fsrs_parameters(
+    request: kmemo_pb2.GetDefaultFsrsParametersRequest,
+) -> kmemo_pb2.GetDefaultFsrsParametersResponse:
+    """Expose the fsrs library's built-in default Scheduler parameters (ignores worker runtime overrides)."""
+    _ = request
+    builtin = SchedulerSettingModel(
+        parameters=_DEFAULT_PARAMETERS,
+        desired_retention=_DEFAULT_DESIRED_RETENTION,
+        maximum_interval=_DEFAULT_MAXIMUM_INTERVAL,
+    )
+    try:
+        ver = importlib.metadata.version("fsrs")
+    except importlib.metadata.PackageNotFoundError:
+        ver = ""
+    resp = kmemo_pb2.GetDefaultFsrsParametersResponse(
+        builtin_setting=_setting_to_proto(builtin),
+    )
+    if ver:
+        resp.fsrs_package_version = ver
+    return resp
 
 
 def get_card_retrievability(

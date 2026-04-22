@@ -41,3 +41,9 @@ func (s *Scheduler) OptimizeParameters(ctx context.Context, in fsrs.OptimizePara
 	_, _ = ctx, in
 	return nil, fsrs.ErrUnavailable
 }
+
+// GetBuiltinDefaultParameters implements fsrs.FSRSScheduler.
+func (s *Scheduler) GetBuiltinDefaultParameters(ctx context.Context) (*fsrs.BuiltinDefaultParameters, error) {
+	_ = ctx
+	return nil, fsrs.ErrUnavailable
+}

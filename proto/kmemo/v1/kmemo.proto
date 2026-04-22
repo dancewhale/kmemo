@@ -10,6 +10,8 @@ option go_package = "kmemo/gen/kmemo/v1;kmemov1";
 // All RPCs are unary; streaming is intentionally omitted for now.
 service KmemoProcessor {
   rpc SchedulerSetSetting(SchedulerSetSettingRequest) returns (SchedulerSetSettingResponse);
+  // Returns the fsrs Python package default Scheduler parameters (fresh Scheduler(), not worker runtime override).
+  rpc GetDefaultFsrsParameters(GetDefaultFsrsParametersRequest) returns (GetDefaultFsrsParametersResponse);
   rpc GetCardRetrievability(GetCardRetrievabilityRequest) returns (GetCardRetrievabilityResponse);
   rpc ReviewCard(ReviewCardRequest) returns (ReviewCardResponse);
   rpc RescheduleCard(RescheduleCardRequest) returns (RescheduleCardResponse);
@@ -89,6 +91,13 @@ message SchedulerSetSettingResponse {
   SchedulerSetting effective_setting = 1;
   repeated string warnings = 2;
   optional string diagnostics = 3;
+}
+
+message GetDefaultFsrsParametersRequest {}
+
+message GetDefaultFsrsParametersResponse {
+  SchedulerSetting builtin_setting = 1;
+  optional string fsrs_package_version = 2;
 }
 
 message GetCardRetrievabilityRequest {

@@ -19,17 +19,18 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	KmemoProcessor_SchedulerSetSetting_FullMethodName   = "/kmemo.v1.KmemoProcessor/SchedulerSetSetting"
-	KmemoProcessor_GetCardRetrievability_FullMethodName = "/kmemo.v1.KmemoProcessor/GetCardRetrievability"
-	KmemoProcessor_ReviewCard_FullMethodName            = "/kmemo.v1.KmemoProcessor/ReviewCard"
-	KmemoProcessor_RescheduleCard_FullMethodName        = "/kmemo.v1.KmemoProcessor/RescheduleCard"
-	KmemoProcessor_OptimizeParameters_FullMethodName    = "/kmemo.v1.KmemoProcessor/OptimizeParameters"
-	KmemoProcessor_CleanHtml_FullMethodName             = "/kmemo.v1.KmemoProcessor/CleanHtml"
-	KmemoProcessor_SubmitImportJob_FullMethodName       = "/kmemo.v1.KmemoProcessor/SubmitImportJob"
-	KmemoProcessor_GetJob_FullMethodName                = "/kmemo.v1.KmemoProcessor/GetJob"
-	KmemoProcessor_ListJobEvents_FullMethodName         = "/kmemo.v1.KmemoProcessor/ListJobEvents"
-	KmemoProcessor_CancelJob_FullMethodName             = "/kmemo.v1.KmemoProcessor/CancelJob"
-	KmemoProcessor_GetCapabilities_FullMethodName       = "/kmemo.v1.KmemoProcessor/GetCapabilities"
+	KmemoProcessor_SchedulerSetSetting_FullMethodName      = "/kmemo.v1.KmemoProcessor/SchedulerSetSetting"
+	KmemoProcessor_GetDefaultFsrsParameters_FullMethodName = "/kmemo.v1.KmemoProcessor/GetDefaultFsrsParameters"
+	KmemoProcessor_GetCardRetrievability_FullMethodName    = "/kmemo.v1.KmemoProcessor/GetCardRetrievability"
+	KmemoProcessor_ReviewCard_FullMethodName               = "/kmemo.v1.KmemoProcessor/ReviewCard"
+	KmemoProcessor_RescheduleCard_FullMethodName           = "/kmemo.v1.KmemoProcessor/RescheduleCard"
+	KmemoProcessor_OptimizeParameters_FullMethodName       = "/kmemo.v1.KmemoProcessor/OptimizeParameters"
+	KmemoProcessor_CleanHtml_FullMethodName                = "/kmemo.v1.KmemoProcessor/CleanHtml"
+	KmemoProcessor_SubmitImportJob_FullMethodName          = "/kmemo.v1.KmemoProcessor/SubmitImportJob"
+	KmemoProcessor_GetJob_FullMethodName                   = "/kmemo.v1.KmemoProcessor/GetJob"
+	KmemoProcessor_ListJobEvents_FullMethodName            = "/kmemo.v1.KmemoProcessor/ListJobEvents"
+	KmemoProcessor_CancelJob_FullMethodName                = "/kmemo.v1.KmemoProcessor/CancelJob"
+	KmemoProcessor_GetCapabilities_FullMethodName          = "/kmemo.v1.KmemoProcessor/GetCapabilities"
 )
 
 // KmemoProcessorClient is the client API for KmemoProcessor service.
@@ -40,6 +41,8 @@ const (
 // All RPCs are unary; streaming is intentionally omitted for now.
 type KmemoProcessorClient interface {
 	SchedulerSetSetting(ctx context.Context, in *SchedulerSetSettingRequest, opts ...grpc.CallOption) (*SchedulerSetSettingResponse, error)
+	// Returns the fsrs Python package default Scheduler parameters (fresh Scheduler(), not worker runtime override).
+	GetDefaultFsrsParameters(ctx context.Context, in *GetDefaultFsrsParametersRequest, opts ...grpc.CallOption) (*GetDefaultFsrsParametersResponse, error)
 	GetCardRetrievability(ctx context.Context, in *GetCardRetrievabilityRequest, opts ...grpc.CallOption) (*GetCardRetrievabilityResponse, error)
 	ReviewCard(ctx context.Context, in *ReviewCardRequest, opts ...grpc.CallOption) (*ReviewCardResponse, error)
 	RescheduleCard(ctx context.Context, in *RescheduleCardRequest, opts ...grpc.CallOption) (*RescheduleCardResponse, error)
@@ -64,6 +67,16 @@ func (c *kmemoProcessorClient) SchedulerSetSetting(ctx context.Context, in *Sche
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SchedulerSetSettingResponse)
 	err := c.cc.Invoke(ctx, KmemoProcessor_SchedulerSetSetting_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *kmemoProcessorClient) GetDefaultFsrsParameters(ctx context.Context, in *GetDefaultFsrsParametersRequest, opts ...grpc.CallOption) (*GetDefaultFsrsParametersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetDefaultFsrsParametersResponse)
+	err := c.cc.Invoke(ctx, KmemoProcessor_GetDefaultFsrsParameters_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -178,6 +191,8 @@ func (c *kmemoProcessorClient) GetCapabilities(ctx context.Context, in *GetCapab
 // All RPCs are unary; streaming is intentionally omitted for now.
 type KmemoProcessorServer interface {
 	SchedulerSetSetting(context.Context, *SchedulerSetSettingRequest) (*SchedulerSetSettingResponse, error)
+	// Returns the fsrs Python package default Scheduler parameters (fresh Scheduler(), not worker runtime override).
+	GetDefaultFsrsParameters(context.Context, *GetDefaultFsrsParametersRequest) (*GetDefaultFsrsParametersResponse, error)
 	GetCardRetrievability(context.Context, *GetCardRetrievabilityRequest) (*GetCardRetrievabilityResponse, error)
 	ReviewCard(context.Context, *ReviewCardRequest) (*ReviewCardResponse, error)
 	RescheduleCard(context.Context, *RescheduleCardRequest) (*RescheduleCardResponse, error)
@@ -200,6 +215,9 @@ type UnimplementedKmemoProcessorServer struct{}
 
 func (UnimplementedKmemoProcessorServer) SchedulerSetSetting(context.Context, *SchedulerSetSettingRequest) (*SchedulerSetSettingResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SchedulerSetSetting not implemented")
+}
+func (UnimplementedKmemoProcessorServer) GetDefaultFsrsParameters(context.Context, *GetDefaultFsrsParametersRequest) (*GetDefaultFsrsParametersResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetDefaultFsrsParameters not implemented")
 }
 func (UnimplementedKmemoProcessorServer) GetCardRetrievability(context.Context, *GetCardRetrievabilityRequest) (*GetCardRetrievabilityResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCardRetrievability not implemented")
@@ -266,6 +284,24 @@ func _KmemoProcessor_SchedulerSetSetting_Handler(srv interface{}, ctx context.Co
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(KmemoProcessorServer).SchedulerSetSetting(ctx, req.(*SchedulerSetSettingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _KmemoProcessor_GetDefaultFsrsParameters_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetDefaultFsrsParametersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(KmemoProcessorServer).GetDefaultFsrsParameters(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: KmemoProcessor_GetDefaultFsrsParameters_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(KmemoProcessorServer).GetDefaultFsrsParameters(ctx, req.(*GetDefaultFsrsParametersRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -460,6 +496,10 @@ var KmemoProcessor_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SchedulerSetSetting",
 			Handler:    _KmemoProcessor_SchedulerSetSetting_Handler,
+		},
+		{
+			MethodName: "GetDefaultFsrsParameters",
+			Handler:    _KmemoProcessor_GetDefaultFsrsParameters_Handler,
 		},
 		{
 			MethodName: "GetCardRetrievability",

@@ -19,4 +19,7 @@ type FSRSScheduler interface {
 	SetGlobalSetting(ctx context.Context, param *models.FSRSParameter) error
 
 	OptimizeParameters(ctx context.Context, in OptimizeParametersInput) (*models.FSRSParameter, error)
+
+	// GetBuiltinDefaultParameters returns the fsrs library defaults from the Python worker (unavailable without gRPC).
+	GetBuiltinDefaultParameters(ctx context.Context) (*BuiltinDefaultParameters, error)
 }

@@ -12,8 +12,10 @@ type Entry struct {
 }
 
 func L(ctx context.Context) Entry {
+	// Skip Entry.{Debug,Info,Warn,Error} so caller/file keys point at real call sites, not api.go.
+	base := FromContext(ctx)
 	return Entry{
-		logger:       FromContext(ctx),
+		logger:       base.WithOptions(zap.AddCallerSkip(1)),
 		debugEnabled: DebugEnabled(ctx),
 	}
 }

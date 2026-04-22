@@ -62,6 +62,13 @@ class KmemoProcessor(kmemo_pb2_grpc.KmemoProcessorServicer):
             lambda: fsrs_service.scheduler_set_setting(request),
         )
 
+    def GetDefaultFsrsParameters(self, request, context):
+        return with_rpc_logging(
+            context,
+            "GetDefaultFsrsParameters",
+            lambda: fsrs_service.get_default_fsrs_parameters(request),
+        )
+
     def GetCardRetrievability(self, request, context):
         return with_rpc_logging(
             context,

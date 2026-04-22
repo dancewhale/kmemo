@@ -41,6 +41,11 @@ class KmemoProcessorStub(object):
                 request_serializer=kmemo_dot_v1_dot_kmemo__pb2.SchedulerSetSettingRequest.SerializeToString,
                 response_deserializer=kmemo_dot_v1_dot_kmemo__pb2.SchedulerSetSettingResponse.FromString,
                 _registered_method=True)
+        self.GetDefaultFsrsParameters = channel.unary_unary(
+                '/kmemo.v1.KmemoProcessor/GetDefaultFsrsParameters',
+                request_serializer=kmemo_dot_v1_dot_kmemo__pb2.GetDefaultFsrsParametersRequest.SerializeToString,
+                response_deserializer=kmemo_dot_v1_dot_kmemo__pb2.GetDefaultFsrsParametersResponse.FromString,
+                _registered_method=True)
         self.GetCardRetrievability = channel.unary_unary(
                 '/kmemo.v1.KmemoProcessor/GetCardRetrievability',
                 request_serializer=kmemo_dot_v1_dot_kmemo__pb2.GetCardRetrievabilityRequest.SerializeToString,
@@ -100,6 +105,13 @@ class KmemoProcessorServicer(object):
 
     def SchedulerSetSetting(self, request, context):
         """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetDefaultFsrsParameters(self, request, context):
+        """Returns the fsrs Python package default Scheduler parameters (fresh Scheduler(), not worker runtime override).
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -171,6 +183,11 @@ def add_KmemoProcessorServicer_to_server(servicer, server):
                     servicer.SchedulerSetSetting,
                     request_deserializer=kmemo_dot_v1_dot_kmemo__pb2.SchedulerSetSettingRequest.FromString,
                     response_serializer=kmemo_dot_v1_dot_kmemo__pb2.SchedulerSetSettingResponse.SerializeToString,
+            ),
+            'GetDefaultFsrsParameters': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetDefaultFsrsParameters,
+                    request_deserializer=kmemo_dot_v1_dot_kmemo__pb2.GetDefaultFsrsParametersRequest.FromString,
+                    response_serializer=kmemo_dot_v1_dot_kmemo__pb2.GetDefaultFsrsParametersResponse.SerializeToString,
             ),
             'GetCardRetrievability': grpc.unary_unary_rpc_method_handler(
                     servicer.GetCardRetrievability,
@@ -252,6 +269,33 @@ class KmemoProcessor(object):
             '/kmemo.v1.KmemoProcessor/SchedulerSetSetting',
             kmemo_dot_v1_dot_kmemo__pb2.SchedulerSetSettingRequest.SerializeToString,
             kmemo_dot_v1_dot_kmemo__pb2.SchedulerSetSettingResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetDefaultFsrsParameters(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/kmemo.v1.KmemoProcessor/GetDefaultFsrsParameters',
+            kmemo_dot_v1_dot_kmemo__pb2.GetDefaultFsrsParametersRequest.SerializeToString,
+            kmemo_dot_v1_dot_kmemo__pb2.GetDefaultFsrsParametersResponse.FromString,
             options,
             channel_credentials,
             insecure,
