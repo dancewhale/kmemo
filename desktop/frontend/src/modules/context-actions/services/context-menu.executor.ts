@@ -6,7 +6,6 @@ import { useEditorStore } from '@/modules/editor/stores/editor.store'
 import { useExtractStore } from '@/modules/extract/stores/extract.store'
 import { useReaderStore } from '@/modules/reader/stores/reader.store'
 import { useReviewStore } from '@/modules/review/stores/review.store'
-import { useSearchStore } from '@/modules/search/stores/search.store'
 import { useTreeStore } from '@/modules/knowledge-tree/stores/tree.store'
 import { useWorkspaceStore } from '@/modules/workspace/stores/workspace.store'
 import { useObjectCreationStore } from '@/modules/object-creation/stores/object-creation.store'
@@ -15,7 +14,7 @@ import type { ContextMenuContext } from '../types'
 
 const A = CONTEXT_ACTION_IDS
 
-async function goContext(ctx: 'reading' | 'knowledge' | 'review' | 'search') {
+async function goContext(ctx: 'reading' | 'knowledge') {
   useWorkspaceStore().setContext(ctx)
   await router.push({ name: ROUTE_NAMES[ctx] })
 }
@@ -38,7 +37,6 @@ export async function executeContextAction(
   const reader = useReaderStore()
   const extract = useExtractStore()
   const review = useReviewStore()
-  const search = useSearchStore()
   const editor = useEditorStore()
   const workspace = useWorkspaceStore()
 
@@ -348,115 +346,6 @@ export async function executeContextAction(
       await Promise.all([extract.initialize(), tree.initialize()])
       extract.removeExtractById(extractId)
       toast.success('摘录已删除')
-      return
-    }
-
-    case A.search.openResult:
-    case A.search.revealResult: {
-      const rid = context.searchResultId ?? context.entityId
-      const hit = search.results.find((r) => r.id === rid)
-      if (!hit) {
-        return
-      }
-      await search.openResult(hit)
-      return
-    }
-    case A.search.copyTitle: {
-      const rid = context.searchResultId ?? context.entityId
-      const hit = search.results.find((r) => r.id === rid)
-      if (!hit?.title) {
-        return
-      }
-      const ok = await copyToClipboard(hit.title)
-      if (ok) {
-        toast.success('标题已复制')
-      } else {
-        toast.error('复制失败')
-      }
-      return
-    }
-
-    case A.review.openItem: {
-      const rid = context.reviewId ?? context.entityId
-      await review.initialize()
-      review.setSelectedItem(rid)
-      await goContext('review')
-      return
-    }
-    case A.review.openSourceArticle: {
-      const rid = context.reviewId ?? context.entityId
-      await review.initialize()
-      const item = review.getItemById(rid)
-      if (!item?.sourceArticleId) {
-        return
-      }
-      await reader.initialize()
-      reader.openArticleById(item.sourceArticleId)
-      const article = reader.getArticleById(item.sourceArticleId)
-      if (article) {
-        editor.openDocument({
-          id: article.id,
-          title: article.title,
-          content: article.content,
-          contentType: 'article',
-          updatedAt: article.updatedAt,
-          sourceUrl: article.sourceUrl,
-          tags: article.tags,
-        })
-      }
-      workspace.setContext('reading')
-      await router.push({ name: ROUTE_NAMES.reading })
-      return
-    }
-    case A.review.openExtract: {
-      const rid = context.reviewId ?? context.entityId
-      await review.initialize()
-      const item = review.getItemById(rid)
-      if (!item?.extractId) {
-        return
-      }
-      await Promise.all([extract.initialize(), tree.initialize()])
-      extract.openExtract(item.extractId)
-      const ex = extract.getExtractById(item.extractId)
-      if (ex?.treeNodeId) {
-        tree.setSelectedNode(ex.treeNodeId)
-      }
-      await goContext('knowledge')
-      return
-    }
-    case A.review.openCard: {
-      const rid = context.reviewId ?? context.entityId
-      await review.initialize()
-      const item = review.getItemById(rid)
-      if (!item || item.type !== 'card') {
-        return
-      }
-      const cardStore = useCardStore()
-      await Promise.all([cardStore.initialize(), tree.initialize()])
-      if (item.nodeId) {
-        cardStore.openCardByNodeId(item.nodeId)
-      } else if (item.cardId) {
-        cardStore.setSelectedCard(item.cardId)
-        const c = cardStore.getCardById(item.cardId)
-        if (c?.nodeId) {
-          tree.setSelectedNode(c.nodeId)
-        }
-      }
-      await goContext('knowledge')
-      return
-    }
-    case A.review.markReviewed: {
-      const rid = context.reviewId ?? context.entityId
-      await review.initialize()
-      review.removeItemFromSessionQueue(rid)
-      toast.success('已标记为已复习（演示）')
-      return
-    }
-    case A.review.removeFromQueue: {
-      const rid = context.reviewId ?? context.entityId
-      await review.initialize()
-      review.removeItemFromSessionQueue(rid)
-      toast.success('已从本轮队列移除')
       return
     }
 

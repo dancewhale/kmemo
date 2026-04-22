@@ -8,7 +8,6 @@ import { useEditorStore } from '@/modules/editor/stores/editor.store'
 import { useExtractStore } from '@/modules/extract/stores/extract.store'
 import EditorShell from '@/modules/editor/components/EditorShell.vue'
 import { useCardStore } from '@/modules/card/stores/card.store'
-import ReviewCard from '@/modules/review/components/ReviewCard.vue'
 import type { EditorDocument } from '@/modules/editor/types'
 
 const store = useWorkspaceStore()
@@ -30,26 +29,7 @@ onMounted(() => {
   void reader.initialize()
 })
 
-const inboxArticle = computed(() => {
-  if (store.currentContext !== 'inbox') {
-    return null
-  }
-  const id = store.selectedArticleId
-  if (!id) {
-    return null
-  }
-  return reader.getArticleById(id)
-})
 const readingArticle = computed(() => (store.currentContext === 'reading' ? reader.selectedArticle : null))
-const activeEditorArticle = computed(() => {
-  if (store.currentContext === 'reading') {
-    return readingArticle.value
-  }
-  if (store.currentContext === 'inbox') {
-    return inboxArticle.value
-  }
-  return null
-})
 const kn = computed(() => (store.currentContext === 'knowledge' ? tree.selectedNode : null))
 const showExtractDetail = computed(() => {
   return store.currentContext === 'knowledge' && tree.isSelectedExtractNode
@@ -57,8 +37,8 @@ const showExtractDetail = computed(() => {
 
 const documentForEditor = computed((): EditorDocument | null => {
   const ctx = store.currentContext
-  if (ctx === 'reading' || ctx === 'inbox') {
-    const doc = activeEditorArticle.value
+  if (ctx === 'reading') {
+    const doc = readingArticle.value
     if (!doc) {
       return null
     }
@@ -160,16 +140,10 @@ watch(
 
 const title = computed(() => {
   switch (store.currentContext) {
-    case 'inbox':
-      return 'Inbox editor'
     case 'reading':
       return 'Editor'
     case 'knowledge':
       return 'Editor'
-    case 'review':
-      return 'Review'
-    case 'search':
-      return 'Result detail'
     default:
       return 'Detail'
   }
@@ -178,55 +152,12 @@ const title = computed(() => {
 
 <template>
   <AppPane :title="title" class="read-pane" :scrollable="false" :padded="'none'">
-    <template
-      v-if="
-        store.currentContext === 'reading' ||
-        store.currentContext === 'inbox' ||
-        store.currentContext === 'knowledge'
-      "
-    >
-      <EditorShell />
-    </template>
-
-    <template v-else-if="store.currentContext === 'review'">
-      <ReviewCard />
-    </template>
-
-    <template v-else-if="store.currentContext === 'search'">
-      <div class="read-pane__block">
-        <h2 class="read-pane__h">Search workspace</h2>
-        <p class="read-pane__p">
-          Use the tree pane as the global search hub. Selecting a result jumps directly to the
-          target workflow (reading, knowledge, or review) so editing and review stay in their
-          native modules.
-        </p>
-      </div>
-    </template>
+    <EditorShell />
   </AppPane>
 </template>
 
 <style scoped lang="scss">
-@use '@/app/styles/variables.scss' as *;
-
 .read-pane {
   height: 100%;
-}
-
-.read-pane__block {
-  padding: $space-md;
-}
-
-.read-pane__h {
-  margin: 0 0 $space-md;
-  font-size: $font-size-lg;
-  font-weight: 600;
-  line-height: $line-tight;
-}
-
-.read-pane__p {
-  margin: 0 0 $space-md;
-  font-size: $font-size-sm;
-  color: $color-text-secondary;
-  line-height: $line-normal;
 }
 </style>

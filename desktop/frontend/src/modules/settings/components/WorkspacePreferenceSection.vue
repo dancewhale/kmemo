@@ -8,13 +8,7 @@ import type { WorkspaceDefaultContext } from '../types'
 const settings = useSettingsStore()
 const { workspacePreferences } = storeToRefs(settings)
 
-const contexts: WorkspaceDefaultContext[] = [
-  'inbox',
-  'reading',
-  'knowledge',
-  'review',
-  'search',
-]
+const contexts: WorkspaceDefaultContext[] = ['reading', 'knowledge']
 </script>
 
 <template>

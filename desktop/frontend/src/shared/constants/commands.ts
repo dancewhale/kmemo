@@ -1,11 +1,6 @@
 export const COMMAND_IDS = {
-  goInbox: 'go-inbox',
   goReading: 'go-reading',
   goKnowledge: 'go-knowledge',
-  goReview: 'go-review',
-  goSearch: 'go-search',
-  focusSearch: 'focus-search',
-  openFirstReviewItem: 'open-first-review-item',
   openSelectedArticle: 'open-selected-article',
   createExtract: 'create-extract',
   openSelectedExtract: 'open-selected-extract',

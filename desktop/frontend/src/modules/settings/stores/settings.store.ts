@@ -147,14 +147,15 @@ export const useSettingsStore = defineStore('settings', {
       writeLocalStorageJSON(WORKSPACE_LAST_CONTEXT_STORAGE_KEY, context)
     },
     getStartupContext(): WorkspacePreferences['defaultContext'] {
-      const fallback = this.preferences.workspace.defaultContext
+      const normalize = (v: string | undefined): WorkspacePreferences['defaultContext'] =>
+        v === 'knowledge' ? 'knowledge' : 'reading'
+
+      const fallback = normalize(this.preferences.workspace.defaultContext as string)
       if (!this.preferences.workspace.restoreLastContextOnLaunch) {
         return fallback
       }
-      const saved = readLocalStorageJSON<WorkspacePreferences['defaultContext']>(
-        WORKSPACE_LAST_CONTEXT_STORAGE_KEY,
-      )
-      return saved ?? fallback
+      const saved = readLocalStorageJSON<string>(WORKSPACE_LAST_CONTEXT_STORAGE_KEY)
+      return normalize(saved ?? fallback)
     },
     applyPreferences() {
       const workspace = useWorkspaceStore()

@@ -31,17 +31,4 @@ export const CONTEXT_ACTION_IDS = {
     copyQuote: 'copy-extract-quote',
     deleteExtract: 'delete-extract',
   },
-  search: {
-    openResult: 'open-search-result',
-    revealResult: 'reveal-search-result',
-    copyTitle: 'copy-search-title',
-  },
-  review: {
-    openItem: 'open-review-item',
-    openSourceArticle: 'open-review-source-article',
-    openExtract: 'open-review-extract',
-    openCard: 'open-review-card',
-    markReviewed: 'mark-review-reviewed',
-    removeFromQueue: 'remove-review-item',
-  },
 } as const

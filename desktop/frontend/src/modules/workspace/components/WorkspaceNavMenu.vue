@@ -1,25 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import {
-  ArrowDown,
-  Collection,
-  Document,
-  Notebook,
-  Reading,
-  Search,
-} from '@element-plus/icons-vue'
+import { ArrowDown, Collection, Reading } from '@element-plus/icons-vue'
 import { ROUTE_PATHS } from '@/shared/constants/routes'
 
 const route = useRoute()
 const router = useRouter()
 
 const items = computed(() => [
-  { key: 'inbox', label: 'Inbox', to: ROUTE_PATHS.inbox, icon: Document },
   { key: 'reading', label: 'Reading', to: ROUTE_PATHS.reading, icon: Reading },
   { key: 'knowledge', label: 'Knowledge', to: ROUTE_PATHS.knowledge, icon: Collection },
-  { key: 'review', label: 'Review', to: ROUTE_PATHS.review, icon: Notebook },
-  { key: 'search', label: 'Search', to: ROUTE_PATHS.search, icon: Search },
 ])
 
 const currentLabel = computed(() => {

@@ -33,9 +33,10 @@ export const useWorkspaceStore = defineStore('workspace', {
     syncStatus: 'idle' as 'idle' | 'syncing' | 'saved',
   }),
   actions: {
-    setContext(ctx: WorkspaceContext) {
-      this.currentContext = ctx
-      writeLocalStorageJSON(WORKSPACE_LAST_CONTEXT_STORAGE_KEY, ctx)
+    setContext(ctx: WorkspaceContext | string) {
+      const next: WorkspaceContext = ctx === 'knowledge' ? 'knowledge' : 'reading'
+      this.currentContext = next
+      writeLocalStorageJSON(WORKSPACE_LAST_CONTEXT_STORAGE_KEY, next)
     },
 
     setRightPaneWidth(w: number) {

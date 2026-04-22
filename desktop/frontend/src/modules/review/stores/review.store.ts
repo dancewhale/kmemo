@@ -5,6 +5,9 @@ import { isWailsAvailable } from '@/api/wails'
 import { mockReviewItems } from '@/mock/review'
 import { useToast } from '@/shared/composables/useToast'
 import { useWorkspaceStore } from '@/modules/workspace/stores/workspace.store'
+import { useReaderStore } from '@/modules/reader/stores/reader.store'
+import { useTreeStore } from '@/modules/knowledge-tree/stores/tree.store'
+import { useExtractStore } from '@/modules/extract/stores/extract.store'
 import * as reviewRepository from '../services/review.repository'
 import {
   buildReviewRecord,
@@ -187,9 +190,39 @@ export const useReviewStore = defineStore('review', {
       if (!item) {
         return
       }
-      useWorkspaceStore().setContext('review')
       this.setSelectedItem(reviewItemId)
-      await router.push({ name: ROUTE_NAMES.review })
+      const workspace = useWorkspaceStore()
+      const reader = useReaderStore()
+      const tree = useTreeStore()
+      const extract = useExtractStore()
+
+      if (item.sourceArticleId) {
+        await reader.initialize()
+        reader.openArticleById(item.sourceArticleId)
+        workspace.setContext('reading')
+        await router.push({ name: ROUTE_NAMES.reading })
+        return
+      }
+      if (item.nodeId) {
+        await tree.initialize()
+        tree.setSelectedNode(item.nodeId)
+        workspace.setContext('knowledge')
+        await router.push({ name: ROUTE_NAMES.knowledge })
+        return
+      }
+      if (item.extractId) {
+        await Promise.all([extract.initialize(), tree.initialize()])
+        extract.openExtract(item.extractId)
+        const ex = extract.getExtractById(item.extractId)
+        if (ex?.treeNodeId) {
+          tree.setSelectedNode(ex.treeNodeId)
+        }
+        workspace.setContext('knowledge')
+        await router.push({ name: ROUTE_NAMES.knowledge })
+        return
+      }
+      workspace.setContext('reading')
+      await router.push({ name: ROUTE_NAMES.reading })
     },
 
     async ensureReadyWithSelection(preferredId: string | null) {

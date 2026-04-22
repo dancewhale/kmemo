@@ -50,19 +50,6 @@ const registry: Record<ContextEntityType, ContextMenuRegistryRow[]> = {
     { id: T.extract.copyQuote, label: 'Copy Quote', icon: 'DocumentCopy' },
     { id: T.extract.deleteExtract, label: 'Delete Extract', icon: 'Delete', danger: true, dividerBefore: true },
   ],
-  'search-result': [
-    { id: T.search.openResult, label: 'Open Result', icon: 'Right' },
-    { id: T.search.revealResult, label: 'Reveal in Context', icon: 'View' },
-    { id: T.search.copyTitle, label: 'Copy Title', icon: 'DocumentCopy', dividerBefore: true },
-  ],
-  'review-item': [
-    { id: T.review.openItem, label: 'Open Review Item', icon: 'Notebook' },
-    { id: T.review.openSourceArticle, label: 'Open Source Article', icon: 'Document', dividerBefore: true },
-    { id: T.review.openExtract, label: 'Open Extract', icon: 'EditPen' },
-    { id: T.review.openCard, label: 'Open Card', icon: 'Postcard' },
-    { id: T.review.markReviewed, label: 'Mark Reviewed', icon: 'CircleCheck', dividerBefore: true },
-    { id: T.review.removeFromQueue, label: 'Remove From Queue', icon: 'Close', danger: true },
-  ],
 }
 
 export function getRegistryRows(entityType: ContextEntityType): ContextMenuRegistryRow[] {

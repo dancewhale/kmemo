@@ -7,13 +7,12 @@ import { useTreeStore } from '@/modules/knowledge-tree/stores/tree.store'
 import { useExtractStore } from '@/modules/extract/stores/extract.store'
 import { useReviewStore } from '@/modules/review/stores/review.store'
 import { useEditorStore } from '@/modules/editor/stores/editor.store'
-import { useSearchStore } from '@/modules/search/stores/search.store'
 import { useCaptureStore } from '@/modules/inbox-capture/stores/capture.store'
 import { useObjectCreationStore } from '@/modules/object-creation/stores/object-creation.store'
 import { useCardStore } from '@/modules/card/stores/card.store'
 import { buildPendingExtractFromSelection } from '@/modules/extract/services/extract.mapper'
 
-async function goContext(context: 'inbox' | 'reading' | 'knowledge' | 'review' | 'search') {
+async function goContext(context: 'reading' | 'knowledge') {
   const workspace = useWorkspaceStore()
   workspace.setContext(context)
   await router.push({ name: ROUTE_NAMES[context] })
@@ -24,7 +23,6 @@ export function isCommandEnabled(commandId: CommandId): boolean {
   const reader = useReaderStore()
   const tree = useTreeStore()
   const extract = useExtractStore()
-  const review = useReviewStore()
   const editor = useEditorStore()
 
   switch (commandId) {
@@ -52,8 +50,6 @@ export function isCommandEnabled(commandId: CommandId): boolean {
         workspace.currentContext === 'knowledge' &&
         Boolean(extract.selectedExtractId ?? tree.selectedNode?.sourceExtractId)
       )
-    case COMMAND_IDS.openFirstReviewItem:
-      return review.initialized ? review.queueItems.length > 0 : true
     default:
       return true
   }
@@ -66,7 +62,6 @@ export async function executeCommand(commandId: CommandId): Promise<boolean> {
   const extract = useExtractStore()
   const review = useReviewStore()
   const editor = useEditorStore()
-  const search = useSearchStore()
   const capture = useCaptureStore()
   const creation = useObjectCreationStore()
   const card = useCardStore()
@@ -76,9 +71,6 @@ export async function executeCommand(commandId: CommandId): Promise<boolean> {
   }
 
   switch (commandId) {
-    case COMMAND_IDS.goInbox:
-      await goContext('inbox')
-      return true
     case COMMAND_IDS.captureBlankArticle:
       capture.openDialog('blank')
       return true
@@ -107,22 +99,6 @@ export async function executeCommand(commandId: CommandId): Promise<boolean> {
       return true
     case COMMAND_IDS.goKnowledge:
       await goContext('knowledge')
-      return true
-    case COMMAND_IDS.goReview:
-      await goContext('review')
-      return true
-    case COMMAND_IDS.goSearch:
-      await goContext('search')
-      return true
-    case COMMAND_IDS.focusSearch:
-      await goContext('search')
-      await search.initialize()
-      search.requestFocus()
-      return true
-    case COMMAND_IDS.openFirstReviewItem:
-      await review.initialize()
-      review.openFirstAvailable()
-      await goContext('review')
       return true
     case COMMAND_IDS.openSelectedArticle: {
       await reader.initialize()
@@ -275,7 +251,6 @@ export async function executeCommand(commandId: CommandId): Promise<boolean> {
     }
     case COMMAND_IDS.toggleCommandPalette:
     case COMMAND_IDS.closeCommandPalette:
-      // handled by command store / shortcuts
       return true
     default:
       return false

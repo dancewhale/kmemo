@@ -6,7 +6,6 @@ import { useToast } from '@/shared/composables/useToast'
 import { useExtractStore } from '@/modules/extract/stores/extract.store'
 import { useReaderStore } from '@/modules/reader/stores/reader.store'
 import { useReviewStore } from '@/modules/review/stores/review.store'
-import { useSearchStore } from '@/modules/search/stores/search.store'
 import { isWailsAvailable } from '@/api/wails'
 import * as knowledgeRepository from '@/modules/knowledge-tree/services/knowledge.repository'
 import * as cardRepository from '@/modules/card/services/card.repository'
@@ -50,14 +49,6 @@ function emptyDraft(): CreateObjectDraftState {
       sourceArticleId: null,
       sourceArticleTitle: null,
     },
-  }
-}
-
-function refreshSearchIndex() {
-  const search = useSearchStore()
-  search.refreshIndex()
-  if (search.initialized) {
-    search.runSearch()
   }
 }
 
@@ -228,7 +219,6 @@ export const useObjectCreationStore = defineStore('object-creation', {
           tree.addNode(node)
         }
         await this.goKnowledge()
-        refreshSearchIndex()
         toast.success('Node created')
         this.closeDialog()
         this.resetDraft()
@@ -324,7 +314,6 @@ export const useObjectCreationStore = defineStore('object-creation', {
           }
         }
         await this.goKnowledge()
-        refreshSearchIndex()
         this.closeDialog()
         this.resetDraft()
       } finally {
@@ -354,7 +343,6 @@ export const useObjectCreationStore = defineStore('object-creation', {
         extract.addExtract(item)
         tree.addNode(kn)
         await this.goKnowledge()
-        refreshSearchIndex()
         toast.success('Manual extract created')
         this.closeDialog()
         this.resetDraft()

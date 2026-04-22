@@ -4,7 +4,6 @@ import { ROUTE_NAMES } from '@/shared/constants/routes'
 import { useToast } from '@/shared/composables/useToast'
 import { useEditorStore } from '@/modules/editor/stores/editor.store'
 import { useReaderStore } from '@/modules/reader/stores/reader.store'
-import { useSearchStore } from '@/modules/search/stores/search.store'
 import { useWorkspaceStore } from '@/modules/workspace/stores/workspace.store'
 import {
   buildArticleFromBlankInput,
@@ -144,7 +143,6 @@ export const useCaptureStore = defineStore('inbox-capture', {
       const reader = useReaderStore()
       const editor = useEditorStore()
       const workspace = useWorkspaceStore()
-      const search = useSearchStore()
 
       await reader.initialize()
       reader.addArticle(article)
@@ -161,10 +159,6 @@ export const useCaptureStore = defineStore('inbox-capture', {
       })
       workspace.setContext('reading')
       await router.push({ name: ROUTE_NAMES.reading })
-      search.refreshIndex()
-      if (search.initialized) {
-        search.runSearch()
-      }
       toast.success(successMessage)
       this.closeDialog()
       this.resetDraft()

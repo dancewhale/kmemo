@@ -3,7 +3,6 @@ import { useEditorStore } from '@/modules/editor/stores/editor.store'
 import { useExtractStore } from '@/modules/extract/stores/extract.store'
 import { useReaderStore } from '@/modules/reader/stores/reader.store'
 import { useReviewStore } from '@/modules/review/stores/review.store'
-import { useSearchStore } from '@/modules/search/stores/search.store'
 import { useTreeStore } from '@/modules/knowledge-tree/stores/tree.store'
 import { useCardStore } from '@/modules/card/stores/card.store'
 import { buildCardItemFromTreeNode } from '@/modules/card/services/card.mapper'
@@ -29,7 +28,6 @@ export function buildContextMenuItems(context: ContextMenuContext): ContextActio
   const reader = useReaderStore()
   const extract = useExtractStore()
   const review = useReviewStore()
-  const search = useSearchStore()
   const editor = useEditorStore()
 
   if (context.entityType === 'tree-node') {
@@ -114,40 +112,6 @@ export function buildContextMenuItems(context: ContextMenuContext): ContextActio
       if (row.id === A.extract.openReviewItem) {
         const linked = review.getReviewItemByExtractId(ex.id)
         row.disabled = !(ex.reviewItemId || linked)
-      }
-    }
-  }
-
-  if (context.entityType === 'search-result') {
-    const rid = context.searchResultId ?? context.entityId
-    const hit = search.results.find((r) => r.id === rid)
-    for (const row of items) {
-      if (!hit) {
-        row.disabled = true
-        continue
-      }
-      if (row.id === A.search.copyTitle) {
-        row.disabled = !hit.title?.trim()
-      }
-    }
-  }
-
-  if (context.entityType === 'review-item') {
-    const rid = context.reviewId ?? context.entityId
-    const item = review.getItemById(rid)
-    for (const row of items) {
-      if (!item) {
-        row.disabled = true
-        continue
-      }
-      if (row.id === A.review.openSourceArticle) {
-        row.disabled = !item.sourceArticleId
-      }
-      if (row.id === A.review.openExtract) {
-        row.disabled = !item.extractId
-      }
-      if (row.id === A.review.openCard) {
-        row.disabled = item.type !== 'card' || (!item.cardId && !item.nodeId)
       }
     }
   }

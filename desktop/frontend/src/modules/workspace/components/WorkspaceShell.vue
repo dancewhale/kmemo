@@ -8,7 +8,6 @@ import BottomStatusBar from './BottomStatusBar.vue'
 import AppSplitter from '@/shared/components/AppSplitter.vue'
 import { useTreeStore } from '@/modules/knowledge-tree/stores/tree.store'
 import { useReaderStore } from '@/modules/reader/stores/reader.store'
-import { useReviewStore } from '@/modules/review/stores/review.store'
 
 const props = defineProps<{
   context: WorkspaceContext
@@ -21,23 +20,9 @@ async function applyContext(ctx: WorkspaceContext) {
   if (ctx === 'reading') {
     const reader = useReaderStore()
     await reader.ensureReadyWithSelection(store.selectedArticleId)
-  } else if (ctx === 'inbox') {
-    const reader = useReaderStore()
-    await reader.initialize()
-    const inbox = reader.inboxArticles
-    const preferred = store.selectedArticleId
-    const still = preferred && inbox.some((a) => a.id === preferred)
-    reader.setSelectedArticle(still ? preferred : inbox[0]?.id ?? null)
   } else if (ctx === 'knowledge') {
     const tree = useTreeStore()
     await tree.ensureReadyWithSelection(store.selectedNodeId)
-  } else if (ctx === 'review') {
-    const review = useReviewStore()
-    await review.ensureReadyWithSelection(store.selectedReviewId)
-  } else if (ctx === 'search') {
-    store.selectArticle(null)
-    store.selectNode(null)
-    store.selectReview(null)
   }
 }
 

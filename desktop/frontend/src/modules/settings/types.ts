@@ -1,4 +1,4 @@
-export type WorkspaceDefaultContext = 'inbox' | 'reading' | 'knowledge' | 'review' | 'search'
+export type WorkspaceDefaultContext = 'reading' | 'knowledge'
 
 export type ReadingWidthMode = 'narrow' | 'medium' | 'wide'
 export type EditorFontSizeMode = 'small' | 'medium' | 'large'

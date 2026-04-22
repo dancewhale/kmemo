@@ -1,11 +1,4 @@
-export type ContextEntityType =
-  | 'tree-node'
-  | 'tree-card'
-  | 'tree-extract'
-  | 'article'
-  | 'extract'
-  | 'search-result'
-  | 'review-item'
+export type ContextEntityType = 'tree-node' | 'tree-card' | 'tree-extract' | 'article' | 'extract'
 
 export interface ContextMenuContext {
   entityType: ContextEntityType
@@ -14,7 +7,6 @@ export interface ContextMenuContext {
   articleId?: string | null
   extractId?: string | null
   reviewId?: string | null
-  searchResultId?: string | null
   x: number
   y: number
 }

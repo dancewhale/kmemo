@@ -1,4 +1,4 @@
-export type WorkspaceContext = 'inbox' | 'reading' | 'knowledge' | 'review' | 'search'
+export type WorkspaceContext = 'reading' | 'knowledge'
 
 export interface WorkspaceState {
   currentContext: WorkspaceContext

@@ -56,11 +56,6 @@ async function onKeyDown(e: KeyboardEvent): Promise<void> {
     await commandStore.executeById(COMMAND_IDS.toggleCommandPalette)
     return
   }
-  if (isMeta && key === 'f') {
-    e.preventDefault()
-    await commandStore.executeById(COMMAND_IDS.focusSearch)
-    return
-  }
 
   if (commandStore.isOpen) {
     if (e.key === 'ArrowDown') {
@@ -92,35 +87,14 @@ async function onKeyDown(e: KeyboardEvent): Promise<void> {
   if (e.altKey && !isMeta && !e.shiftKey) {
     if (key === '1') {
       e.preventDefault()
-      await commandStore.executeById(COMMAND_IDS.goInbox)
+      await commandStore.executeById(COMMAND_IDS.goReading)
       return
     }
     if (key === '2') {
       e.preventDefault()
-      await commandStore.executeById(COMMAND_IDS.goReading)
-      return
-    }
-    if (key === '3') {
-      e.preventDefault()
       await commandStore.executeById(COMMAND_IDS.goKnowledge)
       return
     }
-    if (key === '4') {
-      e.preventDefault()
-      await commandStore.executeById(COMMAND_IDS.goReview)
-      return
-    }
-    if (key === '5') {
-      e.preventDefault()
-      await commandStore.executeById(COMMAND_IDS.goSearch)
-      return
-    }
-  }
-
-  if (isMeta && e.shiftKey && key === 'r') {
-    e.preventDefault()
-    await commandStore.executeById(COMMAND_IDS.openFirstReviewItem)
-    return
   }
 
   if (!e.altKey && !e.shiftKey && !isMeta && key === 'g') {
@@ -139,12 +113,6 @@ async function onKeyDown(e: KeyboardEvent): Promise<void> {
       e.preventDefault()
       clearGoPrefix()
       await commandStore.executeById(COMMAND_IDS.goKnowledge)
-      return
-    }
-    if (key === 'v') {
-      e.preventDefault()
-      clearGoPrefix()
-      await commandStore.executeById(COMMAND_IDS.goReview)
       return
     }
     clearGoPrefix()
