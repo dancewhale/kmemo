@@ -9,9 +9,12 @@
 ### Added
 
 - `WorkspaceNavMenu`：主导航置于 `MainLayout` 的 `AppHeader` 的 `#actions` 插槽，使用 Element Plus 下拉菜单切换 **Reading / Knowledge**（旧书签路径 `inbox` / `review` / `search` 重定向到 Reading）。
+- **Knowledge 树（TreePane / TreePanel）**：`knowledge-tree` store 新增 getter `treeListEmptyMessage`，用于空列表文案区分「尚无知识库节点」与「筛选无匹配」。
 
 ### Changed
 
+- **Knowledge 树数据源**：`useTreeStore` 的 `initialize()` 仅从 Wails `GetKnowledgeTree`（经 `knowledge.repository.fetchKnowledgeTree`）加载扁平节点；不再在请求失败或 `!isWailsAvailable()` 时回退到 `mock/tree` 演示数据。失败或非桌面环境时 `rawNodes` / `expandedNodeIds` 置空，并用 toast 提示（失败沿用接口错误信息；无 Wails 时提示需在桌面应用中加载）。成功且无根节点时展开列表清空，避免引用已失效 id。
+- **TreePanel**：空状态 `AppEmpty` 的 `message` 改为绑定 `tree.treeListEmptyMessage`，替代原先单一的 “No nodes match the current filter”。
 - 工作区上下文 `WorkspaceContext` 仅保留 `reading` 与 `knowledge`；从设置或持久化读出的旧值（inbox / review / search）在启动与写入时归一为上述二者之一。
 - 打开复习项（`openReviewItemInWorkspace`）不再进入已移除的 Review 路由，改为按关联跳转到 Reading（文章来源）或 Knowledge（节点 / 摘录）。
 - 快捷键：`Alt+1` / `Alt+2` 与 `g r` / `g k` 对应 Reading / Knowledge；移除原 Inbox、Review、Search 与全局搜索相关的快捷键绑定。
@@ -23,6 +26,7 @@
 
 ### Removed
 
+- 前端演示用知识树 mock：`desktop/frontend/src/mock/tree.ts` 已删除；`src/mock/index.ts` 中不再导出 `./tree`。
 - **Inbox / Review / Search** 三个独立路由页面与主导航入口；`TreePane` / `ReadPane` 中仅服务这三类工作区的 UI 分支；`modules/search` 整模块（索引、全局搜索 UI、与捕获/对象创建中的索引刷新联动）。
 - Review 页专用队列 UI：`ReviewQueue`、`ReviewQueueItem`、`ReviewCard`、`ReviewMetaSection`（复习数据仍由 `review` store 等保留，卡片/摘录侧栏复习流程不受影响）。
 - `LeftSidebar.vue` 及 `WorkspaceShell` 内左侧栏与首条竖向 `AppSplitter`。

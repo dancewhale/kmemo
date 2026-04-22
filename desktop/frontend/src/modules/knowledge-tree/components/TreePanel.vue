@@ -43,7 +43,7 @@ function isExpanded(id: string) {
       <div v-if="loading" class="tree-panel__loading">
         <AppLoading label="Loading tree…" />
       </div>
-      <AppEmpty v-else-if="!visibleNodes.length" message="No nodes match the current filter" />
+      <AppEmpty v-else-if="!visibleNodes.length" :message="tree.treeListEmptyMessage" />
       <div v-else class="tree-panel__list" role="tree">
         <TreeNodeItem
           v-for="n in visibleNodes"

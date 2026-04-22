@@ -1,5 +1,4 @@
 import { defineStore } from 'pinia'
-import { mockKnowledgeNodes } from '@/mock/tree'
 import { isWailsAvailable } from '@/api/wails'
 import { useToast } from '@/shared/composables/useToast'
 import { useWorkspaceStore } from '@/modules/workspace/stores/workspace.store'
@@ -117,6 +116,15 @@ export const useTreeStore = defineStore('knowledge-tree', {
     isSelectedExtractNode(): boolean {
       return this.selectedNode?.type === 'extract'
     },
+
+    /** Copy for TreePanel when there are no visible rows (empty DB vs filter). */
+    treeListEmptyMessage(): string {
+      const q = this.searchKeyword.trim()
+      if (q && this.rawNodes.length > 0) {
+        return 'No nodes match the current filter'
+      }
+      return 'No knowledge libraries yet.'
+    },
   },
 
   actions: {
@@ -132,28 +140,16 @@ export const useTreeStore = defineStore('knowledge-tree', {
           if (res.ok) {
             this.rawNodes = res.data
             const roots = res.data.filter((n) => n.parentId == null).map((n) => n.id)
-            this.expandedNodeIds = roots.length ? roots : [...this.expandedNodeIds]
+            this.expandedNodeIds = roots.length ? roots : []
           } else {
             toast.warning(res.error.message || '无法加载知识树')
-            this.rawNodes = mockKnowledgeNodes.map((n) => ({ ...n }))
-            this.expandedNodeIds = [
-              'kn-reading',
-              'kn-knowledge',
-              'kn-mem-topic',
-              'kn-rw-topic',
-              'kn-sr-topic',
-            ]
+            this.rawNodes = []
+            this.expandedNodeIds = []
           }
         } else {
-          await Promise.resolve()
-          this.rawNodes = mockKnowledgeNodes.map((n) => ({ ...n }))
-          this.expandedNodeIds = [
-            'kn-reading',
-            'kn-knowledge',
-            'kn-mem-topic',
-            'kn-rw-topic',
-            'kn-sr-topic',
-          ]
+          this.rawNodes = []
+          this.expandedNodeIds = []
+          toast.warning('知识树需在桌面应用（Wails）中从后端加载')
         }
       } finally {
         this.initialized = true
