@@ -2,16 +2,14 @@
 import { computed, onMounted, watch } from 'vue'
 import { useWorkspaceStore } from '../stores/workspace.store'
 import AppPane from '@/shared/components/AppPane.vue'
-import AppEmpty from '@/shared/components/AppEmpty.vue'
 import { useTreeStore } from '@/modules/knowledge-tree/stores/tree.store'
 import { useReaderStore } from '@/modules/reader/stores/reader.store'
 import { useEditorStore } from '@/modules/editor/stores/editor.store'
 import { useExtractStore } from '@/modules/extract/stores/extract.store'
 import EditorShell from '@/modules/editor/components/EditorShell.vue'
-import ExtractDetailPanel from '@/modules/extract/components/ExtractDetailPanel.vue'
-import CardDetailPanel from '@/modules/card/components/CardDetailPanel.vue'
 import { useCardStore } from '@/modules/card/stores/card.store'
 import ReviewCard from '@/modules/review/components/ReviewCard.vue'
+import type { EditorDocument } from '@/modules/editor/types'
 
 const store = useWorkspaceStore()
 const tree = useTreeStore()
@@ -19,6 +17,14 @@ const reader = useReaderStore()
 const editor = useEditorStore()
 const extract = useExtractStore()
 const card = useCardStore()
+
+function htmlEscape(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
 
 onMounted(() => {
   void reader.initialize()
@@ -45,20 +51,70 @@ const activeEditorArticle = computed(() => {
   return null
 })
 const kn = computed(() => (store.currentContext === 'knowledge' ? tree.selectedNode : null))
-const knChildCount = computed(() => (store.currentContext === 'knowledge' ? tree.selectedNodeChildCount : 0))
-const selectedExtract = computed(() => {
-  const extractId = kn.value?.sourceExtractId
-  if (!extractId) {
-    return null
-  }
-  return extract.items.find((item) => item.id === extractId) ?? null
-})
 const showExtractDetail = computed(() => {
   return store.currentContext === 'knowledge' && tree.isSelectedExtractNode
 })
 
-const showCardDetail = computed(() => {
-  return store.currentContext === 'knowledge' && kn.value?.type === 'card'
+const documentForEditor = computed((): EditorDocument | null => {
+  const ctx = store.currentContext
+  if (ctx === 'reading' || ctx === 'inbox') {
+    const doc = activeEditorArticle.value
+    if (!doc) {
+      return null
+    }
+    return {
+      id: doc.id,
+      title: doc.title,
+      content: doc.content,
+      contentType: 'article',
+      updatedAt: doc.updatedAt,
+      sourceUrl: doc.sourceUrl,
+      tags: doc.tags,
+    }
+  }
+  if (ctx !== 'knowledge') {
+    return null
+  }
+  const node = kn.value
+  if (!node) {
+    return null
+  }
+  if (showExtractDetail.value && extract.selectedExtract) {
+    const e = extract.selectedExtract
+    const noteBlock = e.note.trim()
+      ? `<h2>Note</h2><p>${htmlEscape(e.note)}</p>`
+      : ''
+    const content = `<blockquote><p>${htmlEscape(e.quote)}</p></blockquote>${noteBlock}<p class="kmono">${htmlEscape(
+      e.sourceArticleTitle,
+    )}</p>`
+    return {
+      id: e.id,
+      title: e.title || 'Extract',
+      content,
+      contentType: 'extract',
+      updatedAt: e.updatedAt,
+    }
+  }
+  if (node.type === 'card' && card.selectedCard) {
+    const c = card.selectedCard
+    const content = `<h2>Prompt</h2><p>${htmlEscape(c.prompt)}</p><h2>Answer</h2><p>${htmlEscape(c.answer)}</p>`
+    return {
+      id: c.id,
+      title: c.title,
+      content,
+      contentType: 'node',
+      updatedAt: c.updatedAt,
+    }
+  }
+  const desc = node.description?.trim() ?? ''
+  const content = desc ? `<p>${htmlEscape(desc)}</p>` : '<p><em>No description</em></p>'
+  return {
+    id: node.id,
+    title: node.title,
+    content,
+    contentType: 'node',
+    updatedAt: node.updatedAt ?? new Date().toISOString(),
+  }
 })
 
 watch(
@@ -75,22 +131,15 @@ watch(
   },
   { immediate: true },
 )
+
 watch(
-  activeEditorArticle,
+  documentForEditor,
   (doc) => {
     if (!doc) {
       editor.clearDocument()
       return
     }
-    editor.openDocument({
-      id: doc.id,
-      title: doc.title,
-      content: doc.content,
-      contentType: 'article',
-      updatedAt: doc.updatedAt,
-      sourceUrl: doc.sourceUrl,
-      tags: doc.tags,
-    })
+    editor.openDocument(doc)
   },
   { immediate: true },
 )
@@ -116,7 +165,7 @@ const title = computed(() => {
     case 'reading':
       return 'Editor'
     case 'knowledge':
-      return 'Knowledge detail'
+      return 'Editor'
     case 'review':
       return 'Review'
     case 'search':
@@ -129,34 +178,14 @@ const title = computed(() => {
 
 <template>
   <AppPane :title="title" class="read-pane" :scrollable="false" :padded="'none'">
-    <template v-if="store.currentContext === 'reading' || store.currentContext === 'inbox'">
+    <template
+      v-if="
+        store.currentContext === 'reading' ||
+        store.currentContext === 'inbox' ||
+        store.currentContext === 'knowledge'
+      "
+    >
       <EditorShell />
-    </template>
-
-    <template v-else-if="store.currentContext === 'knowledge'">
-      <AppEmpty v-if="!kn" message="Select a node in the tree" />
-      <ExtractDetailPanel v-else-if="showExtractDetail" />
-      <CardDetailPanel v-else-if="showCardDetail" />
-      <div v-else class="read-pane__block">
-        <h2 class="read-pane__h">{{ kn.title }}</h2>
-        <template v-if="kn.description && (kn.type === 'topic' || kn.type === 'card')">
-          <p class="read-pane__label">Note</p>
-          <p class="read-pane__p">{{ kn.description }}</p>
-        </template>
-        <p v-if="selectedExtract" class="read-pane__label">Extract quote</p>
-        <p v-if="selectedExtract" class="read-pane__p read-pane__p--quote">“{{ selectedExtract.quote }}”</p>
-        <p v-if="selectedExtract?.note" class="read-pane__label">Note</p>
-        <p v-if="selectedExtract?.note" class="read-pane__p">{{ selectedExtract.note }}</p>
-        <dl class="read-pane__dl">
-          <div><dt>Id</dt><dd>{{ kn.id }}</dd></div>
-          <div><dt>Type</dt><dd>{{ kn.type }}</dd></div>
-          <div><dt>Parent</dt><dd>{{ kn.parentId ?? '—' }}</dd></div>
-          <div><dt>Child count</dt><dd>{{ knChildCount }}</dd></div>
-          <div v-if="selectedExtract"><dt>Source article</dt><dd>{{ selectedExtract.sourceArticleTitle }}</dd></div>
-          <div v-if="kn.createdAt"><dt>Created</dt><dd>{{ kn.createdAt }}</dd></div>
-          <div v-if="kn.updatedAt"><dt>Updated</dt><dd>{{ kn.updatedAt }}</dd></div>
-        </dl>
-      </div>
     </template>
 
     <template v-else-if="store.currentContext === 'review'">
@@ -194,49 +223,10 @@ const title = computed(() => {
   line-height: $line-tight;
 }
 
-.read-pane__label {
-  margin: 0 0 $space-xs;
-  font-size: $font-size-xs;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: $color-text-secondary;
-}
-
 .read-pane__p {
   margin: 0 0 $space-md;
   font-size: $font-size-sm;
   color: $color-text-secondary;
   line-height: $line-normal;
-}
-
-.read-pane__p--quote {
-  color: $color-text;
-  font-style: italic;
-}
-
-.read-pane__dl {
-  margin: 0;
-  font-size: $font-size-xs;
-  color: $color-text-secondary;
-}
-
-.read-pane__dl > div {
-  display: grid;
-  grid-template-columns: 72px 1fr;
-  gap: $space-sm;
-  padding: $space-xs 0;
-  border-top: 1px solid $color-border-subtle;
-}
-
-.read-pane__dl dt {
-  margin: 0;
-  color: $color-text-secondary;
-}
-
-.read-pane__dl dd {
-  margin: 0;
-  color: $color-text;
-  font-family: $font-mono;
-  word-break: break-all;
 }
 </style>
