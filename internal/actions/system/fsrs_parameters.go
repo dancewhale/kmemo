@@ -2,6 +2,12 @@ package system
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"time"
+
+	"github.com/google/uuid"
 
 	fsrscontract "kmemo/internal/contracts/fsrs"
 	"kmemo/internal/storage/models"
@@ -29,8 +35,52 @@ func (s *FSRSParametersService) List(ctx context.Context) ([]*models.FSRSParamet
 	return items, nil
 }
 
+const defaultFSRSParameterName = "Default"
+
 func (s *FSRSParametersService) GetDefault(ctx context.Context) (*models.FSRSParameter, error) {
-	return s.deps.Parameters.GetDefault(ctx)
+	p, err := s.deps.Parameters.GetDefault(ctx)
+	if err == nil {
+		return p, nil
+	}
+	if !errors.Is(err, repository.ErrNotFound) {
+		return nil, err
+	}
+
+	builtin, err := s.deps.FSRS.GetBuiltinDefaultParameters(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("system: fetch builtin fsrs defaults: %w", err)
+	}
+
+	payload, err := json.Marshal(builtin.Parameters)
+	if err != nil {
+		return nil, fmt.Errorf("system: marshal builtin fsrs parameters: %w", err)
+	}
+
+	now := time.Now().UTC()
+	dr := builtin.DesiredRetention
+	max := builtin.MaximumInterval
+	param := &models.FSRSParameter{
+		ID:               uuid.NewString(),
+		Name:             defaultFSRSParameterName,
+		ParametersJSON:   string(payload),
+		DesiredRetention: &dr,
+		MaximumInterval:  &max,
+		CreatedAt:        now,
+		UpdatedAt:        now,
+	}
+
+	if err := s.deps.Parameters.Create(ctx, param); err != nil {
+		again, ge := s.deps.Parameters.GetDefault(ctx)
+		if ge == nil && again != nil {
+			return again, nil
+		}
+		return nil, fmt.Errorf("system: persist default fsrs parameter: %w", err)
+	}
+
+	if err := s.deps.FSRS.SetGlobalSetting(ctx, param); err != nil {
+		return nil, err
+	}
+	return param, nil
 }
 
 func (s *FSRSParametersService) UpdateDefault(ctx context.Context, input *models.FSRSParameter) (*models.FSRSParameter, error) {
