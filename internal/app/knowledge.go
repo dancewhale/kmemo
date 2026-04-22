@@ -4,9 +4,12 @@ import (
 	"strings"
 	"time"
 
+	"go.uber.org/zap"
+
 	"kmemo/internal/actions/knowledge"
 	"kmemo/internal/storage/models"
 	"kmemo/internal/storage/repository"
+	"kmemo/internal/zaplog"
 )
 
 type KnowledgeDTO struct {
@@ -38,34 +41,60 @@ type UpdateKnowledgeRequest struct {
 }
 
 func (d *Desktop) CreateKnowledge(req CreateKnowledgeRequest) (string, error) {
+	ctx := d.actionContext()
+	log := zaplog.L(ctx).Named("knowledge.api")
 	if strings.TrimSpace(req.Name) == "" {
+		log.Info("CreateKnowledge rejected", zap.String("reason", "empty_name"))
 		return "", repository.ErrInvalidInput
 	}
-	ctx := d.actionContext()
-	return d.actions.Knowledge.Create(ctx, knowledge.CreateInput{
+	id, err := d.actions.Knowledge.Create(ctx, knowledge.CreateInput{
 		Name:        strings.TrimSpace(req.Name),
 		Description: strings.TrimSpace(req.Description),
 		ParentID:    req.ParentID,
 	})
+	if err != nil {
+		log.Info("CreateKnowledge failed", zap.String("name", req.Name), zap.Error(err))
+		return "", err
+	}
+	log.Info("CreateKnowledge ok",
+		zap.String("id", id),
+		zap.String("name", strings.TrimSpace(req.Name)),
+		zap.String("description_excerpt", truncateRunes(strings.TrimSpace(req.Description), 120)),
+		zapOptionalString("parentId", req.ParentID),
+	)
+	return id, nil
 }
 
 func (d *Desktop) GetKnowledge(id string) (*KnowledgeDTO, error) {
 	ctx := d.actionContext()
+	log := zaplog.L(ctx).Named("knowledge.api")
 	knowledgeModel, err := d.actions.Knowledge.Get(ctx, id)
 	if err != nil {
+		log.Info("GetKnowledge failed", zap.String("id", id), zap.Error(err))
 		return nil, err
 	}
 	cc, dc, err := d.actions.Knowledge.CountMapsByKnowledgeIDs(ctx, []string{id})
 	if err != nil {
+		log.Info("GetKnowledge failed", zap.String("id", id), zap.String("phase", "counts"), zap.Error(err))
 		return nil, err
 	}
-	return knowledgeDTOFromModel(knowledgeModel, cc, dc), nil
+	out := knowledgeDTOFromModel(knowledgeModel, cc, dc)
+	log.Info("GetKnowledge ok",
+		zap.String("id", out.ID),
+		zap.String("name", out.Name),
+		zap.Int("cardCount", out.CardCount),
+		zap.Int("dueCount", out.DueCount),
+		zapOptionalString("parentId", out.ParentID),
+	)
+	return out, nil
 }
 
 func (d *Desktop) ListKnowledge(parentID *string) ([]*KnowledgeDTO, error) {
 	ctx := d.actionContext()
+	log := zaplog.L(ctx).Named("knowledge.api")
 	items, err := d.actions.Knowledge.List(ctx, parentID)
 	if err != nil {
+		log.Info("ListKnowledge failed", zapOptionalString("parentId", parentID), zap.Error(err))
 		return nil, err
 	}
 	ids := make([]string, len(items))
@@ -74,33 +103,56 @@ func (d *Desktop) ListKnowledge(parentID *string) ([]*KnowledgeDTO, error) {
 	}
 	cc, dc, err := d.actions.Knowledge.CountMapsByKnowledgeIDs(ctx, ids)
 	if err != nil {
+		log.Info("ListKnowledge failed", zapOptionalString("parentId", parentID), zap.String("phase", "counts"), zap.Error(err))
 		return nil, err
 	}
 	out := make([]*KnowledgeDTO, 0, len(items))
 	for _, item := range items {
 		out = append(out, knowledgeDTOFromModel(item, cc, dc))
 	}
+	sampleIDs := make([]string, 0, min(5, len(out)))
+	for i := range out {
+		if i >= 5 {
+			break
+		}
+		sampleIDs = append(sampleIDs, out[i].ID)
+	}
+	log.Info("ListKnowledge ok",
+		zapOptionalString("parentId", parentID),
+		zap.Int("count", len(out)),
+		zap.Strings("sample_ids", sampleIDs),
+	)
 	return out, nil
 }
 
 func (d *Desktop) GetKnowledgeTree(rootID *string) ([]*KnowledgeTreeNode, error) {
 	ctx := d.actionContext()
+	log := zaplog.L(ctx).Named("knowledge.api")
 	if rootID != nil {
 		root, err := d.actions.Knowledge.GetTree(ctx, *rootID)
 		if err != nil {
+			log.Info("GetKnowledgeTree failed", zap.String("rootId", *rootID), zap.Error(err))
 			return nil, err
 		}
 		var ids []string
 		appendKnowledgeSubtreeIDs(root, &ids)
 		cc, dc, err := d.actions.Knowledge.CountMapsByKnowledgeIDs(ctx, ids)
 		if err != nil {
+			log.Info("GetKnowledgeTree failed", zap.String("rootId", *rootID), zap.String("phase", "counts"), zap.Error(err))
 			return nil, err
 		}
-		return []*KnowledgeTreeNode{toKnowledgeTreeNode(root, cc, dc)}, nil
+		forest := []*KnowledgeTreeNode{toKnowledgeTreeNode(root, cc, dc)}
+		log.Info("GetKnowledgeTree ok",
+			zap.String("mode", "subtree"),
+			zap.String("rootId", *rootID),
+			zap.Int("node_count", countKnowledgeTreeNodes(forest)),
+		)
+		return forest, nil
 	}
 
 	items, err := d.actions.Knowledge.ListAll(ctx)
 	if err != nil {
+		log.Info("GetKnowledgeTree failed", zap.String("mode", "forest"), zap.Error(err))
 		return nil, err
 	}
 	ids := make([]string, len(items))
@@ -109,43 +161,92 @@ func (d *Desktop) GetKnowledgeTree(rootID *string) ([]*KnowledgeTreeNode, error)
 	}
 	cc, dc, err := d.actions.Knowledge.CountMapsByKnowledgeIDs(ctx, ids)
 	if err != nil {
+		log.Info("GetKnowledgeTree failed", zap.String("mode", "forest"), zap.String("phase", "counts"), zap.Error(err))
 		return nil, err
 	}
-	return buildKnowledgeForest(items, cc, dc), nil
+	forest := buildKnowledgeForest(items, cc, dc)
+	log.Info("GetKnowledgeTree ok",
+		zap.String("mode", "forest"),
+		zap.Int("root_count", len(forest)),
+		zap.Int("node_count", countKnowledgeTreeNodes(forest)),
+		zap.Strings("sample_root_ids", firstRootKnowledgeIDs(forest, 5)),
+	)
+	return forest, nil
 }
 
 func (d *Desktop) UpdateKnowledge(id string, req UpdateKnowledgeRequest) error {
+	ctx := d.actionContext()
+	log := zaplog.L(ctx).Named("knowledge.api")
 	if strings.TrimSpace(req.Name) == "" {
+		log.Info("UpdateKnowledge rejected", zap.String("id", id), zap.String("reason", "empty_name"))
 		return repository.ErrInvalidInput
 	}
-	ctx := d.actionContext()
-	return d.actions.Knowledge.Update(ctx, id, knowledge.UpdateInput{
+	err := d.actions.Knowledge.Update(ctx, id, knowledge.UpdateInput{
 		Name:        strings.TrimSpace(req.Name),
 		Description: strings.TrimSpace(req.Description),
 	})
+	if err != nil {
+		log.Info("UpdateKnowledge failed", zap.String("id", id), zap.Error(err))
+		return err
+	}
+	log.Info("UpdateKnowledge ok",
+		zap.String("id", id),
+		zap.String("name", strings.TrimSpace(req.Name)),
+		zap.String("description_excerpt", truncateRunes(strings.TrimSpace(req.Description), 120)),
+	)
+	return nil
 }
 
 func (d *Desktop) DeleteKnowledge(id string) error {
 	ctx := d.actionContext()
-	return d.actions.Knowledge.Delete(ctx, id)
+	log := zaplog.L(ctx).Named("knowledge.api")
+	err := d.actions.Knowledge.Delete(ctx, id)
+	if err != nil {
+		log.Info("DeleteKnowledge failed", zap.String("id", id), zap.Error(err))
+		return err
+	}
+	log.Info("DeleteKnowledge ok", zap.String("id", id))
+	return nil
 }
 
 func (d *Desktop) MoveKnowledge(id string, newParentID *string) error {
+	ctx := d.actionContext()
+	log := zaplog.L(ctx).Named("knowledge.api")
 	if newParentID != nil && *newParentID == id {
+		log.Info("MoveKnowledge rejected", zap.String("id", id), zap.String("reason", "parent_is_self"))
 		return repository.ErrInvalidInput
 	}
-	ctx := d.actionContext()
-	return d.actions.Knowledge.Move(ctx, id, newParentID)
+	err := d.actions.Knowledge.Move(ctx, id, newParentID)
+	if err != nil {
+		log.Info("MoveKnowledge failed", zap.String("id", id), zapOptionalString("newParentId", newParentID), zap.Error(err))
+		return err
+	}
+	log.Info("MoveKnowledge ok", zap.String("id", id), zapOptionalString("newParentId", newParentID))
+	return nil
 }
 
 func (d *Desktop) ArchiveKnowledge(id string) error {
 	ctx := d.actionContext()
-	return d.actions.Knowledge.Archive(ctx, id)
+	log := zaplog.L(ctx).Named("knowledge.api")
+	err := d.actions.Knowledge.Archive(ctx, id)
+	if err != nil {
+		log.Info("ArchiveKnowledge failed", zap.String("id", id), zap.Error(err))
+		return err
+	}
+	log.Info("ArchiveKnowledge ok", zap.String("id", id))
+	return nil
 }
 
 func (d *Desktop) UnarchiveKnowledge(id string) error {
 	ctx := d.actionContext()
-	return d.actions.Knowledge.Unarchive(ctx, id)
+	log := zaplog.L(ctx).Named("knowledge.api")
+	err := d.actions.Knowledge.Unarchive(ctx, id)
+	if err != nil {
+		log.Info("UnarchiveKnowledge failed", zap.String("id", id), zap.Error(err))
+		return err
+	}
+	log.Info("UnarchiveKnowledge ok", zap.String("id", id))
+	return nil
 }
 
 
