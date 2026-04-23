@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { isWailsAvailable } from '@/api/wails'
+import { isWailsAvailable, whenWailsReady } from '@/api/wails'
 import { useToast } from '@/shared/composables/useToast'
 import { useWorkspaceStore } from '@/modules/workspace/stores/workspace.store'
 import * as knowledgeRepository from '../services/knowledge.repository'
@@ -132,15 +132,21 @@ export const useTreeStore = defineStore('knowledge-tree', {
       if (this.initialized && !opts?.force) {
         return
       }
+      if (this.loading) {
+        return
+      }
       this.loading = true
       const toast = useToast()
+      let loaded = false
       try {
+        await whenWailsReady()
         if (isWailsAvailable()) {
           const res = await knowledgeRepository.fetchKnowledgeTree(null)
           if (res.ok) {
             this.rawNodes = res.data
             const roots = res.data.filter((n) => n.parentId == null).map((n) => n.id)
             this.expandedNodeIds = roots.length ? roots : []
+            loaded = true
           } else {
             toast.warning(res.error.message || '无法加载知识树')
             this.rawNodes = []
@@ -152,7 +158,7 @@ export const useTreeStore = defineStore('knowledge-tree', {
           toast.warning('知识树需在桌面应用（Wails）中从后端加载')
         }
       } finally {
-        this.initialized = true
+        this.initialized = loaded
         this.loading = false
       }
     },
